@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5AB6C0E22FA30AED00C44216 /* PortfolioViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AB6C0E12FA30AED00C44216 /* PortfolioViewModel.swift */; };
+		5AB6C0E42FA30B1A00C44216 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AB6C0E32FA30B1A00C44216 /* Models.swift */; };
+		AA000001AA000001AA000001 /* AddHoldingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001AA000001AA000002 /* AddHoldingView.swift */; };
 		7B1D657C2C7BA8B200B82A44 /* StocklyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1D657B2C7BA8B200B82A44 /* StocklyApp.swift */; };
 		7B1D657E2C7BA8B200B82A44 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1D657D2C7BA8B200B82A44 /* ContentView.swift */; };
 		7B1D65802C7BA8B200B82A44 /* Item.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1D657F2C7BA8B200B82A44 /* Item.swift */; };
@@ -35,6 +38,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		5AB6C0E12FA30AED00C44216 /* PortfolioViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioViewModel.swift; sourceTree = "<group>"; };
+		5AB6C0E32FA30B1A00C44216 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		AA000001AA000001AA000002 /* AddHoldingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddHoldingView.swift; sourceTree = "<group>"; };
 		7B1D65782C7BA8B200B82A44 /* Stockly.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Stockly.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7B1D657B2C7BA8B200B82A44 /* StocklyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StocklyApp.swift; sourceTree = "<group>"; };
 		7B1D657D2C7BA8B200B82A44 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -101,6 +107,9 @@
 				7B1D657F2C7BA8B200B82A44 /* Item.swift */,
 				7B1D65812C7BA8B300B82A44 /* Assets.xcassets */,
 				7B1D65832C7BA8B300B82A44 /* Preview Content */,
+				5AB6C0E12FA30AED00C44216 /* PortfolioViewModel.swift */,
+				5AB6C0E32FA30B1A00C44216 /* Models.swift */,
+				AA000001AA000001AA000002 /* AddHoldingView.swift */,
 			);
 			path = Stockly;
 			sourceTree = "<group>";
@@ -194,7 +203,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1540;
-				LastUpgradeCheck = 1540;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					7B1D65772C7BA8B200B82A44 = {
 						CreatedOnToolsVersion = 15.4;
@@ -261,6 +270,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				7B1D657E2C7BA8B200B82A44 /* ContentView.swift in Sources */,
+				5AB6C0E22FA30AED00C44216 /* PortfolioViewModel.swift in Sources */,
+				5AB6C0E42FA30B1A00C44216 /* Models.swift in Sources */,
+				AA000001AA000001AA000001 /* AddHoldingView.swift in Sources */,
 				7B1D65802C7BA8B200B82A44 /* Item.swift in Sources */,
 				7B1D657C2C7BA8B200B82A44 /* StocklyApp.swift in Sources */,
 			);
@@ -334,6 +346,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = F63Q93GR8G;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -357,6 +370,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -397,6 +411,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = F63Q93GR8G;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -413,6 +428,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -426,7 +442,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Stockly/Preview Content\"";
-				DEVELOPMENT_TEAM = F63Q93GR8G;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -442,7 +457,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.ritu.kohli.Stockly;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -455,7 +470,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Stockly/Preview Content\"";
-				DEVELOPMENT_TEAM = F63Q93GR8G;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -471,7 +485,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.ritu.kohli.Stockly;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -479,11 +493,9 @@
 		7B1D65A22C7BA8B300B82A44 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F63Q93GR8G;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
 				MARKETING_VERSION = 1.0;
@@ -499,11 +511,9 @@
 		7B1D65A32C7BA8B300B82A44 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F63Q93GR8G;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
 				MARKETING_VERSION = 1.0;
@@ -519,10 +529,8 @@
 		7B1D65A52C7BA8B300B82A44 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F63Q93GR8G;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ritu.kohli.StocklyUITests;
@@ -537,10 +545,8 @@
 		7B1D65A62C7BA8B300B82A44 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F63Q93GR8G;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ritu.kohli.StocklyUITests;

@@ -1,61 +1,263 @@
-//
-//  ContentView.swift
-//  Stockly
-//
-//  Created by Ritu Kohli on 2024-08-25.
-//
-
 import SwiftUI
-import SwiftData
+import Foundation
+
+// MARK: - Main View
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+
+    @StateObject var vm = PortfolioViewModel()
+    @State private var showAddHolding = false
 
     var body: some View {
-        NavigationSplitView {
-            List {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 18) {
+
+                    header
+
+                    summaryGrid
+
+                    statusBar
+
+                    ForEach(GroupType.allCases, id: \.self) { group in
+                        section(group)
+                    }
+
+                    alertBox
+                }
+                .padding()
+            }
+            .background(Color.black)
+            .navigationBarHidden(true)
+        }
+        .sheet(isPresented: $showAddHolding) {
+            AddHoldingView(vm: vm)
+        }
+    }
+
+    var header: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text("Prosper's Portfolio")
+                    .font(.largeTitle.bold())
+                    .foregroundColor(.white)
+
+                Text(vm.lastUpdated)
+                    .foregroundColor(.gray)
+                    .font(.caption)
+            }
+
+            Spacer()
+
+            Button(action: { showAddHolding = true }) {
+                Image(systemName: "plus")
+                    .foregroundColor(.purple)
+                    .padding()
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Circle())
+            }
+
+            Button(action: {
+                vm.refreshPrices()
+            }) {
+                Image(systemName: vm.isLoading ? "arrow.clockwise" : "arrow.clockwise")
+                    .rotationEffect(.degrees(vm.isLoading ? 180 : 0))
+                    .animation(vm.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: vm.isLoading)
+                    .foregroundColor(.purple)
+                    .padding()
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Circle())
+            }
+        }
+    }
+
+    var summaryGrid: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
+
+            summaryCard("Invested", value: money(vm.totalInvested))
+            summaryCard("Current", value: money(vm.totalValue))
+            summaryCard("P&L", value: money(vm.totalPL), color: vm.totalPL >= 0 ? .green : .red)
+            summaryCard("Return", value: "\(String(format: "%.2f", vm.totalReturn))%", color: vm.totalReturn >= 0 ? .green : .red)
+        }
+    }
+
+    func summaryCard(_ title: String, value: String, color: Color = .white) -> some View {
+        VStack(alignment: .leading) {
+            Text(title.uppercased())
+                .font(.caption2)
+                .foregroundColor(.gray)
+
+            Text(value)
+                .font(.headline.bold())
+                .foregroundColor(color)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(14)
+    }
+
+    var statusBar: some View {
+        HStack {
+            Image(systemName: "info.circle")
+                .foregroundColor(.purple)
+            Text(vm.statusMessage)
+                .foregroundColor(.purple)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color.purple.opacity(0.15))
+        .cornerRadius(12)
+    }
+
+    func section(_ group: GroupType) -> some View {
+        let items = vm.holdings.filter { $0.group == group }
+
+        return VStack(alignment: .leading, spacing: 10) {
+            Text(group.rawValue.uppercased())
+                .font(.caption)
+                .foregroundColor(.gray)
+
+            VStack(spacing: 10) {
                 ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
+                    row(item)
                 }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
+                .onDelete { offsets in
+                    vm.removeHolding(at: offsets, in: group)
                 }
             }
-        } detail: {
-            Text("Select an item")
+            .padding()
+            .background(Color.white.opacity(0.04))
+            .cornerRadius(16)
         }
     }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+    func row(_ h: Holding) -> some View {
+        let priceData = vm.prices[h.sym]
+        let px = priceData?.price ?? h.cost
+        let dayChange = priceData?.dayChangePercent ?? 0
+        let pnl = (px - h.cost) * h.shares
+        let pnlPercent = ((px - h.cost) / h.cost) * 100
+        let smartStatus = vm.smartStatus(for: h)
+        let isEarningsWeek = vm.isEarningsThisWeek(h.sym)
+
+        return VStack(spacing: 8) {
+            // Main row
+            HStack {
+                VStack(alignment: .leading) {
+                    HStack(spacing: 6) {
+                        Text(h.sym)
+                            .font(.headline.bold())
+                            .foregroundColor(.white)
+
+                        // Earnings badge
+                        if isEarningsWeek {
+                            Text("📈")
+                                .font(.caption)
+                        }
+                    }
+
+                    Text(h.name)
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    // Current price with day change
+                    HStack(spacing: 4) {
+                        Text(money(px))
+                            .foregroundColor(.white)
+
+                        if priceData != nil {
+                            Text(dayChange >= 0 ? "▲" : "▼")
+                                .font(.caption2)
+                                .foregroundColor(dayChange >= 0 ? .green : .red)
+                            Text(String(format: "%.2f%%", abs(dayChange)))
+                                .font(.caption2)
+                                .foregroundColor(dayChange >= 0 ? .green : .red)
+                        }
+                    }
+
+                    // P&L
+                    HStack(spacing: 4) {
+                        Text(pnl >= 0 ? "+" : "")
+                        Text(money(pnl))
+                            .foregroundColor(pnl >= 0 ? .green : .red)
+                        Text("(\(pnlPercent >= 0 ? "+" : "")\(String(format: "%.1f", pnlPercent))%)")
+                            .font(.caption)
+                            .foregroundColor(pnl >= 0 ? .green : .red)
+                    }
+                }
+            }
+
+            // Bottom row with status
+            HStack {
+                // Smart status badge
+                statusBadge(smartStatus)
+
+                Spacer()
+
+                // Earnings label if reporting this week
+                if isEarningsWeek, let earningsInfo = vm.earningsDates[h.sym] {
+                    Text("Earnings: \(earningsInfo.label)")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                }
+            }
+        }
+        .padding()
+        .background(Color.white.opacity(0.03))
+        .cornerRadius(12)
+    }
+
+    @ViewBuilder
+    func statusBadge(_ status: SmartStatus) -> some View {
+        let (bgColor, textColor) = badgeColors(for: status.status)
+
+        Text(status.label)
+            .font(.caption2)
+            .fontWeight(.semibold)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(bgColor)
+            .foregroundColor(textColor)
+            .cornerRadius(6)
+    }
+
+    func badgeColors(for status: SmartStatusType) -> (bg: Color, text: Color) {
+        switch status {
+        case .buy:
+            return (Color.green.opacity(0.2), .green)
+        case .hold:
+            return (Color.gray.opacity(0.2), .gray)
+        case .watch:
+            return (Color.blue.opacity(0.2), .blue)
+        case .review:
+            return (Color.red.opacity(0.2), .red)
+        case .trim:
+            return (Color.yellow.opacity(0.2), .yellow)
         }
     }
 
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
+    var alertBox: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("🔔 Trading Alerts")
+                .font(.headline)
+                .foregroundColor(.white)
+
+            Text("Use TradingView to set alerts like META below $600.")
+                .foregroundColor(.gray)
         }
+        .padding()
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(16)
+    }
+
+    func money(_ value: Double) -> String {
+        "$" + String(format: "%.2f", value)
     }
 }
 
-#Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
-}
+// MARK: - App Entry
