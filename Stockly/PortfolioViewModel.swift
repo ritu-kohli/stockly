@@ -100,7 +100,7 @@ class PortfolioViewModel: ObservableObject {
             // Price varies -5% to +10% from cost
             let variation = Double.random(in: -0.05...0.10)
             let simulatedPrice = holding.cost * (1 + variation)
-            prices[holding.sym] = PriceData(price: simulatedPrice, dayChangePercent: dayChangePercent)
+            prices[holding.sym] = PriceData(price: simulatedPrice, dayChangePercent: dayChangePercent, extendedPrice: nil, extendedChangePercent: nil)
         }
         return prices
     }
@@ -208,7 +208,7 @@ class YahooFinanceService {
     }
 
     private func fetchSinglePrice(for symbol: String, completion: @escaping (Result<PriceData, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/\(symbol)?interval=1d&range=1d") else {
+        guard let url = URL(string: "\(baseURL)/\(symbol)?interval=1m&range=1d&includePrePost=true") else {
             completion(.failure(NSError(domain: "YahooFinance", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
             return
         }
@@ -250,14 +250,31 @@ class YahooFinanceService {
                     return
                 }
 
-                guard let currentPrice = meta["regularMarketPrice"] as? Double,
+                guard let regularPrice = meta["regularMarketPrice"] as? Double,
                       let previousClose = meta["chartPreviousClose"] as? Double else {
                     completion(.failure(NSError(domain: "YahooFinance", code: -3, userInfo: [NSLocalizedDescriptionKey: "Missing price data"])))
                     return
                 }
 
-                let dayChangePercent = ((currentPrice - previousClose) / previousClose) * 100
-                completion(.success(PriceData(price: currentPrice, dayChangePercent: dayChangePercent)))
+                let dayChangePercent = ((regularPrice - previousClose) / previousClose) * 100
+
+                // Extract last price from timestamps (includes pre/post market)
+                let closes = (first["indicators"] as? [String: Any])
+                    .flatMap { $0["quote"] as? [[String: Any]] }
+                    .flatMap { $0.first }
+                    .flatMap { $0["close"] as? [Double?] }
+
+                let lastExtended = closes?.compactMap { $0 }.last
+                let extendedChange = lastExtended.map { (($0 - regularPrice) / regularPrice) * 100 }
+                // Only report extended price if it differs from regular (i.e. market is closed)
+                let isExtended = lastExtended.map { abs($0 - regularPrice) > 0.01 } ?? false
+
+                completion(.success(PriceData(
+                    price: regularPrice,
+                    dayChangePercent: dayChangePercent,
+                    extendedPrice: isExtended ? lastExtended : nil,
+                    extendedChangePercent: isExtended ? extendedChange : nil
+                )))
             } catch {
                 completion(.failure(error))
             }

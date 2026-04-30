@@ -40,6 +40,8 @@ enum GroupType: String, Codable, CaseIterable {
 struct PriceData {
     let price: Double
     let dayChangePercent: Double
+    let extendedPrice: Double?      // pre/post market price
+    let extendedChangePercent: Double? // change vs regular close
 }
 
 struct EarningsInfo {

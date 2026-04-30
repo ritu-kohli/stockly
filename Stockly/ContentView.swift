@@ -17,7 +17,7 @@ struct ContentView: View {
 
                     summaryGrid
 
-                    statusBar
+//                    statusBar
 
                     ForEach(GroupType.allCases, id: \.self) { group in
                         section(group)
@@ -138,78 +138,107 @@ struct ContentView: View {
         let dayChange = priceData?.dayChangePercent ?? 0
         let pnl = (px - h.cost) * h.shares
         let pnlPercent = ((px - h.cost) / h.cost) * 100
+        let isUp = dayChange >= 0
         let smartStatus = vm.smartStatus(for: h)
         let isEarningsWeek = vm.isEarningsThisWeek(h.sym)
+        let accentColor: Color = isUp ? .green : .red
 
-        return VStack(spacing: 8) {
-            // Main row
-            HStack {
-                VStack(alignment: .leading) {
-                    HStack(spacing: 6) {
-                        Text(h.sym)
-                            .font(.headline.bold())
-                            .foregroundColor(.white)
+        return VStack(spacing: 0) {
+            // Colored top bar indicating up/down
+            Rectangle()
+                .fill(priceData != nil ? accentColor : Color.clear)
+                .frame(height: 3)
+                .cornerRadius(3)
 
-                        // Earnings badge
-                        if isEarningsWeek {
-                            Text("📈")
-                                .font(.caption)
+            VStack(spacing: 8) {
+                HStack(alignment: .top) {
+                    // Left: ticker + name + badges
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(h.sym)
+                                .font(.headline.bold())
+                                .foregroundColor(.white)
+                            if isEarningsWeek {
+                                Text("📈").font(.caption)
+                            }
                         }
+                        Text(h.name)
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        Text("\(String(format: "%.4g", h.shares)) shares @ \(money(h.cost))")
+                            .font(.caption)
+                            .foregroundColor(.blue)
                     }
 
-                    Text(h.name)
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
+                    Spacer()
 
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 4) {
-                    // Current price with day change
-                    HStack(spacing: 4) {
+                    // Right: current price (big) + day change
+                    VStack(alignment: .trailing, spacing: 2) {
                         Text(money(px))
+                            .font(.title3.bold())
                             .foregroundColor(.white)
 
                         if priceData != nil {
-                            Text(dayChange >= 0 ? "▲" : "▼")
+                            HStack(spacing: 3) {
+                                Image(systemName: isUp ? "arrow.up.right" : "arrow.down.right")
+                                    .font(.caption2.bold())
+                                Text(String(format: "%.2f%%", abs(dayChange)))
+                                    .font(.caption.bold())
+                            }
+                            .foregroundColor(accentColor)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(accentColor.opacity(0.15))
+                            .cornerRadius(4)
+                        }
+
+                        // After-hours price
+                        if let extPx = priceData?.extendedPrice,
+                           let extChg = priceData?.extendedChangePercent {
+                            HStack(spacing: 3) {
+                                Text(money(extPx))
+                                    .font(.caption.bold())
+                                Text(String(format: "%+.2f%%", extChg))
+                                    .font(.caption2)
+                            }
+                            .foregroundColor(extChg >= 0 ? .green : .red)
+                            .opacity(0.85)
+
+                            Text("after hours")
                                 .font(.caption2)
-                                .foregroundColor(dayChange >= 0 ? .green : .red)
-                            Text(String(format: "%.2f%%", abs(dayChange)))
-                                .font(.caption2)
-                                .foregroundColor(dayChange >= 0 ? .green : .red)
+                                .foregroundColor(.gray)
                         }
                     }
+                }
 
-                    // P&L
-                    HStack(spacing: 4) {
-                        Text(pnl >= 0 ? "+" : "")
-                        Text(money(pnl))
+                // Bottom: status badge + P&L + earnings
+                HStack {
+                    statusBadge(smartStatus)
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text("\(pnl >= 0 ? "+" : "")\(money(pnl))")
+                            .font(.caption.bold())
                             .foregroundColor(pnl >= 0 ? .green : .red)
-                        Text("(\(pnlPercent >= 0 ? "+" : "")\(String(format: "%.1f", pnlPercent))%)")
-                            .font(.caption)
-                            .foregroundColor(pnl >= 0 ? .green : .red)
+                        Text("\(pnlPercent >= 0 ? "+" : "")\(String(format: "%.1f", pnlPercent))% overall")
+                            .font(.caption2)
+                            .foregroundColor(pnl >= 0 ? .green.opacity(0.8) : .red.opacity(0.8))
+                    }
+
+                    if isEarningsWeek, let info = vm.earningsDates[h.sym] {
+                        Text("Earnings: \(info.label)")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                            .padding(.leading, 8)
                     }
                 }
             }
-
-            // Bottom row with status
-            HStack {
-                // Smart status badge
-                statusBadge(smartStatus)
-
-                Spacer()
-
-                // Earnings label if reporting this week
-                if isEarningsWeek, let earningsInfo = vm.earningsDates[h.sym] {
-                    Text("Earnings: \(earningsInfo.label)")
-                        .font(.caption2)
-                        .foregroundColor(.orange)
-                }
-            }
+            .padding()
         }
-        .padding()
         .background(Color.white.opacity(0.03))
         .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(priceData != nil ? accentColor.opacity(0.2) : Color.clear, lineWidth: 1))
     }
 
     @ViewBuilder
