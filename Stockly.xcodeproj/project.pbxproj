@@ -9,7 +9,10 @@
 /* Begin PBXBuildFile section */
 		5AB6C0E22FA30AED00C44216 /* PortfolioViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AB6C0E12FA30AED00C44216 /* PortfolioViewModel.swift */; };
 		5AB6C0E42FA30B1A00C44216 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AB6C0E32FA30B1A00C44216 /* Models.swift */; };
-		AA000001AA000001AA000001 /* AddHoldingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001AA000001AA000002 /* AddHoldingView.swift */; };
+		5AB6C0EF2FA47B0500C44216 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AB6C0ED2FA47B0500C44216 /* SettingsView.swift */; };
+		5AB6C0F02FA47B0500C44216 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AB6C0EB2FA47B0500C44216 /* Keychain.swift */; };
+		5AB6C0F12FA47B0500C44216 /* NewsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AB6C0EC2FA47B0500C44216 /* NewsService.swift */; };
+		5AB6C0F22FA47B0500C44216 /* StockDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AB6C0EE2FA47B0500C44216 /* StockDetailView.swift */; };
 		7B1D657C2C7BA8B200B82A44 /* StocklyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1D657B2C7BA8B200B82A44 /* StocklyApp.swift */; };
 		7B1D657E2C7BA8B200B82A44 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1D657D2C7BA8B200B82A44 /* ContentView.swift */; };
 		7B1D65802C7BA8B200B82A44 /* Item.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1D657F2C7BA8B200B82A44 /* Item.swift */; };
@@ -18,6 +21,7 @@
 		7B1D658F2C7BA8B300B82A44 /* StocklyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1D658E2C7BA8B300B82A44 /* StocklyTests.swift */; };
 		7B1D65992C7BA8B300B82A44 /* StocklyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1D65982C7BA8B300B82A44 /* StocklyUITests.swift */; };
 		7B1D659B2C7BA8B300B82A44 /* StocklyUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1D659A2C7BA8B300B82A44 /* StocklyUITestsLaunchTests.swift */; };
+		AA000001AA000001AA000001 /* AddHoldingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001AA000001AA000002 /* AddHoldingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -40,7 +44,10 @@
 /* Begin PBXFileReference section */
 		5AB6C0E12FA30AED00C44216 /* PortfolioViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioViewModel.swift; sourceTree = "<group>"; };
 		5AB6C0E32FA30B1A00C44216 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
-		AA000001AA000001AA000002 /* AddHoldingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddHoldingView.swift; sourceTree = "<group>"; };
+		5AB6C0EB2FA47B0500C44216 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
+		5AB6C0EC2FA47B0500C44216 /* NewsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsService.swift; sourceTree = "<group>"; };
+		5AB6C0ED2FA47B0500C44216 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		5AB6C0EE2FA47B0500C44216 /* StockDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StockDetailView.swift; sourceTree = "<group>"; };
 		7B1D65782C7BA8B200B82A44 /* Stockly.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Stockly.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7B1D657B2C7BA8B200B82A44 /* StocklyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StocklyApp.swift; sourceTree = "<group>"; };
 		7B1D657D2C7BA8B200B82A44 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -52,6 +59,7 @@
 		7B1D65942C7BA8B300B82A44 /* StocklyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StocklyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7B1D65982C7BA8B300B82A44 /* StocklyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StocklyUITests.swift; sourceTree = "<group>"; };
 		7B1D659A2C7BA8B300B82A44 /* StocklyUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StocklyUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		AA000001AA000001AA000002 /* AddHoldingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddHoldingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,6 +110,10 @@
 		7B1D657A2C7BA8B200B82A44 /* Stockly */ = {
 			isa = PBXGroup;
 			children = (
+				5AB6C0EB2FA47B0500C44216 /* Keychain.swift */,
+				5AB6C0EC2FA47B0500C44216 /* NewsService.swift */,
+				5AB6C0ED2FA47B0500C44216 /* SettingsView.swift */,
+				5AB6C0EE2FA47B0500C44216 /* StockDetailView.swift */,
 				7B1D657B2C7BA8B200B82A44 /* StocklyApp.swift */,
 				7B1D657D2C7BA8B200B82A44 /* ContentView.swift */,
 				7B1D657F2C7BA8B200B82A44 /* Item.swift */,
@@ -275,6 +287,10 @@
 				AA000001AA000001AA000001 /* AddHoldingView.swift in Sources */,
 				7B1D65802C7BA8B200B82A44 /* Item.swift in Sources */,
 				7B1D657C2C7BA8B200B82A44 /* StocklyApp.swift in Sources */,
+				5AB6C0EF2FA47B0500C44216 /* SettingsView.swift in Sources */,
+				5AB6C0F02FA47B0500C44216 /* Keychain.swift in Sources */,
+				5AB6C0F12FA47B0500C44216 /* NewsService.swift in Sources */,
+				5AB6C0F22FA47B0500C44216 /* StockDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -4,7 +4,7 @@ import SwiftData
 
 // MARK: - Design Tokens
 
-private extension Color {
+extension Color {
     static let bg            = Color(red: 0.06, green: 0.06, blue: 0.08)
     static let surface       = Color(red: 0.11, green: 0.11, blue: 0.14)
     static let surface2      = Color(red: 0.15, green: 0.15, blue: 0.18)
@@ -28,6 +28,8 @@ struct ContentView: View {
     @State private var selectedIDs = Set<PersistentIdentifier>()
     @State private var contextInjected = false
     @State private var showError = false
+    @State private var showSettings = false
+    @State private var selectedHolding: Holding?
 
     var body: some View {
         NavigationView {
@@ -75,6 +77,12 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showAddHolding) {
             AddHoldingView(vm: vm)
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
+        }
+        .sheet(item: $selectedHolding) { holding in
+            StockDetailView(holding: holding, vm: vm)
         }
     }
 
@@ -127,18 +135,28 @@ struct ContentView: View {
                         .foregroundColor(vm.isLoading ? .accent : .textSecondary)
                         .rotationEffect(.degrees(vm.isLoading ? 360 : 0))
                         .animation(vm.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: vm.isLoading)
-                        .frame(width: 44, height: 44) // 44pt touch target
+                        .frame(width: 44, height: 44)
                         .background(Color.surface)
                         .clipShape(Circle())
                 }
                 .accessibilityLabel("Refresh prices")
                 .accessibilityHint("Fetches the latest stock prices")
 
+                Button(action: { showSettings = true }) {
+                    Image(systemName: "gearshape")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.textSecondary)
+                        .frame(width: 44, height: 44)
+                        .background(Color.surface)
+                        .clipShape(Circle())
+                }
+                .accessibilityLabel("Settings")
+
                 Button(action: { showAddHolding = true }) {
                     Image(systemName: "plus")
                         .font(.subheadline.weight(.bold))
                         .foregroundColor(.white)
-                        .frame(width: 44, height: 44) // 44pt touch target
+                        .frame(width: 44, height: 44)
                         .background(Color.accent)
                         .clipShape(Circle())
                 }
@@ -281,10 +299,13 @@ struct ContentView: View {
                 ForEach(items) { item in
                     rowView(item)
                         .onTapGesture {
-                            guard editMode else { return }
-                            withAnimation(.spring(response: 0.2)) {
-                                if selectedIDs.contains(item.id) { selectedIDs.remove(item.id) }
-                                else { selectedIDs.insert(item.id) }
+                            if editMode {
+                                withAnimation(.spring(response: 0.2)) {
+                                    if selectedIDs.contains(item.id) { selectedIDs.remove(item.id) }
+                                    else { selectedIDs.insert(item.id) }
+                                }
+                            } else {
+                                selectedHolding = item
                             }
                         }
                 }
