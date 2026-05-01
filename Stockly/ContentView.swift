@@ -60,6 +60,17 @@ struct ContentView: View {
                 contextInjected = true
                 vm.updateContext(modelContext)
                 vm.refreshPrices()
+                vm.startAutoRefresh()
+            }
+            .onDisappear {
+                vm.stopAutoRefresh()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                vm.refreshPrices()
+                vm.startAutoRefresh()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+                vm.stopAutoRefresh()
             }
             .onChange(of: vm.errorMessage) { _, msg in showError = msg != nil }
             .alert("Error", isPresented: $showError) {

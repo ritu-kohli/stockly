@@ -14,7 +14,9 @@ class PortfolioViewModel: ObservableObject {
 
     private var modelContext: ModelContext
     private var historicalCache: [String: (data: PriceData, fetchedAt: Date)] = [:]
-    private static let historicalCacheTTL: TimeInterval = 3600 // 1 hour
+    private var refreshTimer: Timer?
+    private static let historicalCacheTTL: TimeInterval = 3600
+    private static let refreshInterval: TimeInterval = 300 // 5 minutes // 1 hour
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -35,6 +37,35 @@ class PortfolioViewModel: ObservableObject {
         guard modelContext !== context else { return }
         self.modelContext = context
         loadHoldings()
+    }
+
+    func startAutoRefresh() {
+        stopAutoRefresh()
+        // Only refresh during market hours (9:30am - 5pm ET Mon-Fri) to avoid wasted calls
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: Self.refreshInterval, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            Task { @MainActor in
+                guard self.isMarketHours() else { return }
+                await self.fetchPrices(for: self.holdings.map { $0.sym })
+            }
+        }
+    }
+
+    func stopAutoRefresh() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+    }
+
+    private func isMarketHours() -> Bool {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/New_York")!
+        let now = Date()
+        let weekday = cal.component(.weekday, from: now)
+        guard weekday >= 2 && weekday <= 6 else { return false } // Mon-Fri only
+        let hour = cal.component(.hour, from: now)
+        let minute = cal.component(.minute, from: now)
+        let totalMinutes = hour * 60 + minute
+        return totalMinutes >= 570 && totalMinutes <= 1020 // 9:30am to 5:00pm ET
     }
 
     // MARK: - Holdings
