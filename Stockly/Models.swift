@@ -22,7 +22,7 @@ class Holding {
 
 // MARK: - Enums
 
-enum GroupType: String, Codable, CaseIterable {
+enum GroupType: String, Codable, CaseIterable, Sendable {
     case tech = "Tech & Social"
     case semi = "Semiconductors & Materials"
     case logistics = "Logistics & Finance"
@@ -35,13 +35,13 @@ enum GroupType: String, Codable, CaseIterable {
     case other = "Other"
 }
 
-enum SmartStatusType {
+enum SmartStatusType: Sendable {
     case strongBuy, buy, hold, watch, trim, review
 }
 
 // MARK: - Supporting Types
 
-struct PriceData {
+struct PriceData: Sendable {
     let price: Double
     let dayChangePercent: Double
     let extendedPrice: Double?
@@ -57,12 +57,12 @@ struct PriceData {
     let rsi14: Double?
 }
 
-struct EarningsInfo {
+struct EarningsInfo: Sendable {
     let date: Date
     let label: String
 }
 
-struct SmartStatus {
+struct SmartStatus: Sendable {
     let status: SmartStatusType
     let label: String
     let score: Double

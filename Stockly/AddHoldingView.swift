@@ -33,8 +33,8 @@ struct AddHoldingView: View {
                             .autocorrectionDisabled()
                             .onChange(of: query) { _, val in
                                 showSuggestions = true
-                                searchDebounce.call { [self] in
-                                    Task { await searchTickers(val) }
+                                searchDebounce.call {
+                                    Task { await self.searchTickers(val) }
                                 }
                             }
                         if isSearching {
@@ -109,41 +109,42 @@ struct AddHoldingView: View {
     }
 
     @MainActor
-    private func searchTickers(_ q: String) {
+    private func searchTickers(_ q: String) async {
         let trimmed = q.trimmingCharacters(in: .whitespaces)
         guard trimmed.count >= 2 else { suggestions = []; return }
         isSearching = true
 
         let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? trimmed
-        guard let url = URL(string: "https://query1.finance.yahoo.com/v1/finance/search?q=\(encoded)&quotesCount=6&newsCount=0") else { return }
+        guard let url = URL(string: "https://query1.finance.yahoo.com/v1/finance/search?q=\(encoded)&quotesCount=6&newsCount=0") else {
+            isSearching = false; return
+        }
 
         var req = URLRequest(url: url)
+        req.timeoutInterval = 10
         req.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
 
-        URLSession.shared.dataTask(with: req) { data, _, _ in
-            guard let data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+        do {
+            let (data, _) = try await URLSession.shared.data(for: req)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let quotes = json["quotes"] as? [[String: Any]] else {
-                DispatchQueue.main.async { isSearching = false }
-                return
+                isSearching = false; return
             }
-
-            let results: [TickerSuggestion] = quotes.compactMap { q in
-                guard let sym = q["symbol"] as? String,
+            suggestions = quotes.compactMap { q in
+                guard let sym  = q["symbol"] as? String,
                       let name = q["shortname"] as? String,
                       let type = q["quoteType"] as? String, type == "EQUITY",
                       !sym.contains(".")
                 else { return nil }
-                let sector = q["sector"] as? String ?? ""
-                let industry = q["industry"] as? String ?? ""
-                return TickerSuggestion(symbol: sym, name: name, group: groupForSectorIndustry(sector, industry))
+                return TickerSuggestion(
+                    symbol: sym, name: name,
+                    group: groupForSectorIndustry(q["sector"] as? String ?? "", q["industry"] as? String ?? "")
+                )
             }
-
-            DispatchQueue.main.async {
-                suggestions = results
-                isSearching = false
-            }
-        }.resume()
+        } catch {
+            // Search failure is non-fatal — just clear suggestions
+            suggestions = []
+        }
+        isSearching = false
     }
 
     private func submit() {
@@ -151,6 +152,9 @@ struct AddHoldingView: View {
         guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { error = "Company name is required"; return }
         guard let sharesVal = Double(shares), sharesVal > 0 else { error = "Enter valid shares"; return }
         guard let costVal = Double(cost), costVal > 0 else { error = "Enter valid avg cost"; return }
+        guard !vm.holdings.contains(where: { $0.sym == sym.uppercased() }) else {
+            error = "\(sym.uppercased()) is already in your portfolio"; return
+        }
         vm.addHolding(Holding(sym: sym, name: name, shares: sharesVal, cost: costVal, group: group))
         dismiss()
     }

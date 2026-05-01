@@ -7,16 +7,12 @@ import SwiftData
 struct ContentView: View {
 
     @Environment(\.modelContext) private var modelContext
-    @StateObject private var vm: PortfolioViewModel
+    @StateObject private var vm = PortfolioViewModel()
     @State private var showAddHolding = false
     @State private var editMode = false
     @State private var selectedIDs = Set<PersistentIdentifier>()
-
-    init() {
-        // Temporary context for init — replaced by environment on appear
-        let container = try! ModelContainer(for: Holding.self)
-        _vm = StateObject(wrappedValue: PortfolioViewModel(modelContext: container.mainContext))
-    }
+    @State private var contextInjected = false
+    @State private var showError = false
 
     var body: some View {
         NavigationView {
@@ -59,7 +55,18 @@ struct ContentView: View {
             }
             .background(Color.black)
             .navigationBarHidden(true)
-            .onAppear { vm.updateContext(modelContext) }
+            .onAppear {
+                guard !contextInjected else { return }
+                contextInjected = true
+                vm.updateContext(modelContext)
+                vm.refreshPrices()
+            }
+            .onChange(of: vm.errorMessage) { _, msg in showError = msg != nil }
+            .alert("Error", isPresented: $showError) {
+                Button("OK") { vm.errorMessage = nil }
+            } message: {
+                Text(vm.errorMessage ?? "")
+            }
         }
         .sheet(isPresented: $showAddHolding) {
             AddHoldingView(vm: vm)
@@ -163,7 +170,7 @@ struct ContentView: View {
         HStack {
             Image(systemName: "info.circle")
                 .foregroundColor(.purple)
-            Text(vm.statusMessage)
+            Text(vm.lastUpdated)
                 .foregroundColor(.purple)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -378,8 +385,17 @@ struct ContentView: View {
         .cornerRadius(16)
     }
 
+    private let currencyFormatter: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .currency
+        f.locale = .current
+        f.maximumFractionDigits = 2
+        f.minimumFractionDigits = 2
+        return f
+    }()
+
     func money(_ value: Double) -> String {
-        "$" + String(format: "%.2f", value)
+        currencyFormatter.string(from: NSNumber(value: value)) ?? "$\(String(format: "%.2f", value))"
     }
 }
 
