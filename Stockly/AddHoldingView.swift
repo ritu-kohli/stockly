@@ -61,7 +61,7 @@ struct AddHoldingView: View {
         guard let sharesVal = Double(shares), sharesVal > 0 else { error = "Enter a valid number of shares"; return }
         guard let costVal = Double(cost), costVal > 0 else { error = "Enter a valid avg cost"; return }
 
-        vm.addHolding(Holding(sym: sym, name: name, shares: sharesVal, cost: costVal, status: status, note: "", group: group))
+        vm.addHolding(Holding(sym: sym, name: name, shares: sharesVal, cost: costVal, status: status, group: group))
         dismiss()
     }
 }

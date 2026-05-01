@@ -1,14 +1,22 @@
 import SwiftUI
 import Foundation
+import SwiftData
 
 // MARK: - Main View
 
 struct ContentView: View {
 
-    @StateObject var vm = PortfolioViewModel()
+    @Environment(\.modelContext) private var modelContext
+    @StateObject private var vm: PortfolioViewModel
     @State private var showAddHolding = false
     @State private var editMode = false
-    @State private var selectedIDs = Set<UUID>()
+    @State private var selectedIDs = Set<PersistentIdentifier>()
+
+    init() {
+        // Temporary context for init — replaced by environment on appear
+        let container = try! ModelContainer(for: Holding.self)
+        _vm = StateObject(wrappedValue: PortfolioViewModel(modelContext: container.mainContext))
+    }
 
     var body: some View {
         NavigationView {
@@ -35,20 +43,23 @@ struct ContentView: View {
                         .transition(.move(edge: .top).combined(with: .opacity))
                     }
 
-                    summaryGrid
+                    if !vm.holdings.isEmpty { summaryGrid }
 
-//                    statusBar
-
-                    ForEach(GroupType.allCases, id: \.self) { group in
-                        section(group)
+                    if vm.holdings.isEmpty {
+                        emptyState
+                    } else {
+                        ForEach(GroupType.allCases, id: \.self) { group in
+                            let items = vm.holdings.filter { $0.group == group }
+                            if !items.isEmpty { section(group) }
+                        }
+                        alertBox
                     }
-
-                    alertBox
                 }
                 .padding()
             }
             .background(Color.black)
             .navigationBarHidden(true)
+            .onAppear { vm.updateContext(modelContext) }
         }
         .sheet(isPresented: $showAddHolding) {
             AddHoldingView(vm: vm)
@@ -90,6 +101,7 @@ struct ContentView: View {
                     .background(Color.white.opacity(0.08))
                     .clipShape(Capsule())
             }
+            .opacity(vm.holdings.isEmpty ? 0 : 1)
 
             Button(action: {
                 vm.refreshPrices()
@@ -129,6 +141,22 @@ struct ContentView: View {
         .padding()
         .background(Color.white.opacity(0.05))
         .cornerRadius(14)
+    }
+
+    var emptyState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "chart.bar.xaxis")
+                .font(.system(size: 48))
+                .foregroundColor(.gray.opacity(0.4))
+            Text("No stocks yet")
+                .font(.headline)
+                .foregroundColor(.gray)
+            Text("Tap + to add your first holding")
+                .font(.caption)
+                .foregroundColor(.gray.opacity(0.6))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
     }
 
     var statusBar: some View {
@@ -276,7 +304,14 @@ struct ContentView: View {
 
                 // Bottom: status badge + P&L + earnings
                 HStack {
-                    statusBadge(smartStatus)
+                    VStack(alignment: .leading, spacing: 3) {
+                        statusBadge(smartStatus)
+                        if !smartStatus.reasons.isEmpty {
+                            Text(smartStatus.reasons.joined(separator: " · "))
+                                .font(.caption2)
+                                .foregroundColor(.gray.opacity(0.7))
+                        }
+                    }
 
                     Spacer()
 
@@ -353,3 +388,7 @@ struct ContentView: View {
 }
 
 // MARK: - App Entry
+
+#Preview {
+    ContentView()
+}
