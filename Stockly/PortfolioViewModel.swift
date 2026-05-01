@@ -136,12 +136,12 @@ class PortfolioViewModel: ObservableObject {
         let status: SmartStatusType
         let label: String
         switch score {
-        case 5...:    status = .buy;    label = "Strong Buy"
-        case 2...:    status = .buy;    label = "Buy"
-        case 0..<2:   status = .hold;   label = "Hold"
-        case (-2)..<0: status = .watch; label = "Watch"
-        case (-4)..<(-2): status = .trim; label = "Trim"
-        default:      status = .review; label = "Review"
+        case 5...:        status = .strongBuy; label = "Strong Buy"
+        case 2...:        status = .buy;       label = "Buy"
+        case 0..<2:       status = .hold;      label = "Hold"
+        case (-2)..<0:    status = .watch;     label = "Watch"
+        case (-4)..<(-2): status = .trim;      label = "Trim"
+        default:          status = .review;    label = "Review"
         }
 
         return SmartStatus(status: status, label: label, score: score, reasons: reasons)
@@ -164,21 +164,19 @@ class PortfolioViewModel: ObservableObject {
         isLoading = true
         statusMessage = "Fetching live prices..."
 
-        YahooFinanceService.shared.fetchPrices(for: syms) { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self else { return }
-                switch result {
-                case .success(let data):
-                    self.prices = data
-                    self.lastUpdated = "Updated \(Date().formatted(date: .omitted, time: .shortened))"
-                    self.statusMessage = "Prices loaded"
-                case .failure(let error):
-                    self.prices = self.generateFallbackPrices()
-                    self.statusMessage = "Using fallback prices: \(error.localizedDescription)"
-                    self.lastUpdated = "Fallback \(Date().formatted(date: .omitted, time: .shortened))"
-                }
-                self.isLoading = false
+        Task {
+            let result = await YahooFinanceService.shared.fetchPricesAsync(for: syms)
+            switch result {
+            case .success(let data):
+                self.prices = data
+                self.lastUpdated = "Updated \(Date().formatted(date: .omitted, time: .shortened))"
+                self.statusMessage = "Prices loaded"
+            case .failure(let error):
+                self.prices = self.generateFallbackPrices()
+                self.statusMessage = "Using fallback prices: \(error.localizedDescription)"
+                self.lastUpdated = "Fallback \(Date().formatted(date: .omitted, time: .shortened))"
             }
+            self.isLoading = false
         }
     }
 
@@ -201,88 +199,43 @@ class PortfolioViewModel: ObservableObject {
 
 // MARK: - Yahoo Finance Service
 
-class YahooFinanceService {
-    @MainActor static let shared = YahooFinanceService()
+actor YahooFinanceService {
+    static let shared = YahooFinanceService()
     private let baseURL = "https://query1.finance.yahoo.com/v8/finance/chart"
     private init() {}
 
-    func fetchPrices(for symbols: [String], completion: @escaping (Result<[String: PriceData], Error>) -> Void) {
-        let group = DispatchGroup()
+    func fetchPricesAsync(for symbols: [String]) async -> Result<[String: PriceData], Error> {
         var priceData: [String: PriceData] = [:]
         var fetchError: Error?
-        let lock = NSLock()
-
-        for symbol in symbols {
-            group.enter()
-            fetchSinglePrice(for: symbol) { result in
-                lock.lock()
+        await withTaskGroup(of: (String, Result<PriceData, Error>).self) { group in
+            for symbol in symbols {
+                group.addTask { await (symbol, self.fetchSinglePrice(for: symbol)) }
+            }
+            for await (symbol, result) in group {
                 switch result {
                 case .success(let data): priceData[symbol] = data
                 case .failure(let error): fetchError = error
                 }
-                lock.unlock()
-                group.leave()
             }
         }
-
-        group.notify(queue: .main) {
-            if let error = fetchError { completion(.failure(error)) }
-            else { completion(.success(priceData)) }
-        }
+        if let error = fetchError { return .failure(error) }
+        return .success(priceData)
     }
 
-    private func fetchSinglePrice(for symbol: String, completion: @escaping (Result<PriceData, Error>) -> Void) {
-        let intraGroup = DispatchGroup()
-        var intradayMeta: [String: Any]?
-        var intradayFirst: [String: Any]?
-        var historicalCloses: [Double] = []
-        var historicalVolumes: [Int] = []
-        var fetchErr: Error?
+    nonisolated private func fetchSinglePrice(for symbol: String) async -> Result<PriceData, Error> {
+        do {
+            async let intradayJson = fetch(url: "\(baseURL)/\(symbol)?interval=1m&range=1d&includePrePost=true")
+            async let historicalJson = fetch(url: "\(baseURL)/\(symbol)?interval=1d&range=3mo")
+            let (intraday, historical) = try await (intradayJson, historicalJson)
 
-        // 1. Intraday (1m/1d) for current price + pre/post
-        intraGroup.enter()
-        fetch(url: "\(baseURL)/\(symbol)?interval=1m&range=1d&includePrePost=true") { result in
-            switch result {
-            case .success(let json):
-                if let chart = json["chart"] as? [String: Any],
-                   let results = chart["result"] as? [[String: Any]],
-                   let first = results.first {
-                    intradayMeta = first["meta"] as? [String: Any]
-                    intradayFirst = first
-                }
-            case .failure(let e): fetchErr = e
-            }
-            intraGroup.leave()
-        }
-
-        // 2. Historical (1d/3mo) for SMA + RSI + avg volume
-        intraGroup.enter()
-        fetch(url: "\(baseURL)/\(symbol)?interval=1d&range=3mo") { result in
-            switch result {
-            case .success(let json):
-                if let chart = json["chart"] as? [String: Any],
-                   let results = chart["result"] as? [[String: Any]],
-                   let first = results.first,
-                   let quotes = (first["indicators"] as? [String: Any])?["quote"] as? [[String: Any]],
-                   let q = quotes.first {
-                    historicalCloses = (q["close"] as? [Double?])?.compactMap { $0 } ?? []
-                    historicalVolumes = (q["volume"] as? [Int?])?.compactMap { $0 } ?? []
-                }
-            case .failure: break // non-fatal, technicals optional
-            }
-            intraGroup.leave()
-        }
-
-        intraGroup.notify(queue: .global()) {
-            guard let meta = intradayMeta else {
-                completion(.failure(fetchErr ?? NSError(domain: "YahooFinance", code: -2, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])))
-                return
-            }
-
-            guard let regularPrice = meta["regularMarketPrice"] as? Double,
+            guard let chart = intraday["chart"] as? [String: Any],
+                  let results = chart["result"] as? [[String: Any]],
+                  let first = results.first,
+                  let meta = first["meta"] as? [String: Any],
+                  let regularPrice = meta["regularMarketPrice"] as? Double,
                   let previousClose = meta["chartPreviousClose"] as? Double else {
-                completion(.failure(NSError(domain: "YahooFinance", code: -3, userInfo: [NSLocalizedDescriptionKey: "Missing price data"])))
-                return
+                let msg = ((intraday["chart"] as? [String: Any])?["error"] as? [String: Any])?["description"] as? String ?? "Invalid response"
+                return .failure(NSError(domain: "YahooFinance", code: -2, userInfo: [NSLocalizedDescriptionKey: msg]))
             }
 
             let dayChangePct = ((regularPrice - previousClose) / previousClose) * 100
@@ -292,21 +245,30 @@ class YahooFinanceService {
             let dayLow     = meta["regularMarketDayLow"]  as? Double ?? regularPrice
             let volume     = meta["regularMarketVolume"] as? Int ?? 0
 
-            // Extended hours
-            let closes1m = (intradayFirst?["indicators"] as? [String: Any])
+            let closes1m = (first["indicators"] as? [String: Any])
                 .flatMap { $0["quote"] as? [[String: Any]] }
                 .flatMap { $0.first }
                 .flatMap { $0["close"] as? [Double?] }
             let lastExtended = closes1m?.compactMap { $0 }.last
             let isExtended = lastExtended.map { abs($0 - regularPrice) > 0.01 } ?? false
 
-            // Technicals from historical
-            let sma20 = historicalCloses.count >= 20 ? historicalCloses.suffix(20).reduce(0,+) / 20 : nil
-            let sma50 = historicalCloses.count >= 50 ? historicalCloses.suffix(50).reduce(0,+) / 50 : nil
-            let avgVol = historicalVolumes.count >= 20 ? historicalVolumes.suffix(20).reduce(0,+) / 20 : 0
-            let rsi14  = Self.computeRSI(closes: historicalCloses, period: 14)
+            var historicalCloses: [Double] = []
+            var historicalVolumes: [Int] = []
+            if let hChart = historical["chart"] as? [String: Any],
+               let hResults = hChart["result"] as? [[String: Any]],
+               let hFirst = hResults.first,
+               let quotes = (hFirst["indicators"] as? [String: Any])?["quote"] as? [[String: Any]],
+               let q = quotes.first {
+                historicalCloses = (q["close"] as? [Double?])?.compactMap { $0 } ?? []
+                historicalVolumes = (q["volume"] as? [Int?])?.compactMap { $0 } ?? []
+            }
 
-            completion(.success(PriceData(
+            let sma20   = historicalCloses.count >= 20 ? historicalCloses.suffix(20).reduce(0,+) / 20 : nil
+            let sma50   = historicalCloses.count >= 50 ? historicalCloses.suffix(50).reduce(0,+) / 50 : nil
+            let avgVol  = historicalVolumes.count >= 20 ? historicalVolumes.suffix(20).reduce(0,+) / 20 : 0
+            let rsi14   = Self.computeRSI(closes: historicalCloses, period: 14)
+
+            return .success(PriceData(
                 price: regularPrice,
                 dayChangePercent: dayChangePct,
                 extendedPrice: isExtended ? lastExtended : nil,
@@ -320,27 +282,24 @@ class YahooFinanceService {
                 sma20: sma20,
                 sma50: sma50,
                 rsi14: rsi14
-            )))
+            ))
+        } catch {
+            return .failure(error)
         }
     }
 
-    private func fetch(url: String, completion: @escaping (Result<[String: Any], Error>) -> Void) {
+    nonisolated private func fetch(url: String) async throws -> [String: Any] {
         guard let url = URL(string: url) else {
-            completion(.failure(NSError(domain: "YahooFinance", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
-            return
+            throw NSError(domain: "YahooFinance", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
         }
         var request = URLRequest(url: url)
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error { completion(.failure(error)); return }
-            guard let data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                completion(.failure(NSError(domain: "YahooFinance", code: -1, userInfo: [NSLocalizedDescriptionKey: "Parse error"])))
-                return
-            }
-            completion(.success(json))
-        }.resume()
+        let (data, _) = try await URLSession.shared.data(for: request)
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw NSError(domain: "YahooFinance", code: -1, userInfo: [NSLocalizedDescriptionKey: "Parse error"])
+        }
+        return json
     }
 
     private static func computeRSI(closes: [Double], period: Int) -> Double? {

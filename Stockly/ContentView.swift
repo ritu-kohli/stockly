@@ -355,16 +355,12 @@ struct ContentView: View {
 
     func badgeColors(for status: SmartStatusType) -> (bg: Color, text: Color) {
         switch status {
-        case .buy:
-            return (Color.green.opacity(0.2), .green)
-        case .hold:
-            return (Color.gray.opacity(0.2), .gray)
-        case .watch:
-            return (Color.blue.opacity(0.2), .blue)
-        case .review:
-            return (Color.red.opacity(0.2), .red)
-        case .trim:
-            return (Color.yellow.opacity(0.2), .yellow)
+        case .strongBuy: return (Color.green.opacity(0.3), .green)
+        case .buy:       return (Color.green.opacity(0.2), .green)
+        case .hold:      return (Color.gray.opacity(0.2),  .gray)
+        case .watch:     return (Color.blue.opacity(0.2),  .blue)
+        case .review:    return (Color.red.opacity(0.2),   .red)
+        case .trim:      return (Color.yellow.opacity(0.2), .yellow)
         }
     }
 

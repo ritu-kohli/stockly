@@ -9,38 +9,43 @@ class Holding {
     var name: String
     var shares: Double
     var cost: Double
-    var status: StatusType
     var group: GroupType
 
-    init(sym: String, name: String, shares: Double, cost: Double, status: StatusType, group: GroupType) {
+    init(sym: String, name: String, shares: Double, cost: Double, group: GroupType) {
         self.sym = sym.uppercased()
         self.name = name
         self.shares = shares
         self.cost = cost
-        self.status = status
         self.group = group
     }
 }
 
-enum StatusType: String, Codable, CaseIterable {
-    case buy = "Buy"
-    case hold = "Hold"
-    case watch = "Watch"
-}
+// MARK: - Enums
 
 enum GroupType: String, Codable, CaseIterable {
     case tech = "Tech & Social"
     case semi = "Semiconductors & Materials"
     case logistics = "Logistics & Finance"
+    case healthcare = "Healthcare"
+    case energy = "Energy"
+    case consumer = "Consumer"
+    case realestate = "Real Estate"
+    case utilities = "Utilities"
     case speculative = "Speculative"
+    case other = "Other"
 }
+
+enum SmartStatusType {
+    case strongBuy, buy, hold, watch, trim, review
+}
+
+// MARK: - Supporting Types
 
 struct PriceData {
     let price: Double
     let dayChangePercent: Double
     let extendedPrice: Double?
     let extendedChangePercent: Double?
-    // Technical signals
     let fiftyTwoWeekHigh: Double
     let fiftyTwoWeekLow: Double
     let dayHigh: Double
@@ -69,8 +74,4 @@ struct SmartStatus {
         self.score = score
         self.reasons = reasons
     }
-}
-
-enum SmartStatusType {
-    case buy, hold, watch, review, trim
 }
