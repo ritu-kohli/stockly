@@ -7,6 +7,8 @@ struct ContentView: View {
 
     @StateObject var vm = PortfolioViewModel()
     @State private var showAddHolding = false
+    @State private var editMode = false
+    @State private var selectedIDs = Set<UUID>()
 
     var body: some View {
         NavigationView {
@@ -14,6 +16,24 @@ struct ContentView: View {
                 VStack(spacing: 18) {
 
                     header
+
+                    if editMode && !selectedIDs.isEmpty {
+                        Button(action: {
+                            withAnimation {
+                                vm.removeHoldings(ids: selectedIDs)
+                                selectedIDs.removeAll()
+                                editMode = false
+                            }
+                        }) {
+                            Label("Delete \(selectedIDs.count) selected", systemImage: "trash")
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.red)
+                                .cornerRadius(12)
+                        }
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                    }
 
                     summaryGrid
 
@@ -55,6 +75,20 @@ struct ContentView: View {
                     .padding()
                     .background(Color.white.opacity(0.08))
                     .clipShape(Circle())
+            }
+
+            Button(action: {
+                withAnimation {
+                    editMode.toggle()
+                    if !editMode { selectedIDs.removeAll() }
+                }
+            }) {
+                Text(editMode ? "Done" : "Edit")
+                    .foregroundColor(.purple)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Capsule())
             }
 
             Button(action: {
@@ -120,10 +154,39 @@ struct ContentView: View {
 
             VStack(spacing: 10) {
                 ForEach(items) { item in
-                    row(item)
-                }
-                .onDelete { offsets in
-                    vm.removeHolding(at: offsets, in: group)
+                    HStack(spacing: 10) {
+                        if editMode {
+                            Image(systemName: selectedIDs.contains(item.id) ? "checkmark.circle.fill" : "circle")
+                                .font(.title3)
+                                .foregroundColor(selectedIDs.contains(item.id) ? .red : .gray)
+                                .onTapGesture {
+                                    withAnimation {
+                                        if selectedIDs.contains(item.id) {
+                                            selectedIDs.remove(item.id)
+                                        } else {
+                                            selectedIDs.insert(item.id)
+                                        }
+                                    }
+                                }
+                        }
+                        row(item)
+                            .onTapGesture {
+                                guard editMode else { return }
+                                withAnimation {
+                                    if selectedIDs.contains(item.id) {
+                                        selectedIDs.remove(item.id)
+                                    } else {
+                                        selectedIDs.insert(item.id)
+                                    }
+                                }
+                            }
+                            .overlay {
+                                if editMode && selectedIDs.contains(item.id) {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.red, lineWidth: 2)
+                                }
+                            }
+                    }
                 }
             }
             .padding()

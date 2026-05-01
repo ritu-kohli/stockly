@@ -52,10 +52,8 @@ class PortfolioViewModel: ObservableObject {
         refreshPrices()
     }
 
-    func removeHolding(at offsets: IndexSet, in group: GroupType) {
-        let groupItems = holdings.enumerated().filter { $0.element.group == group }.map { $0.offset }
-        let toRemove = offsets.map { groupItems[$0] }
-        holdings.remove(atOffsets: IndexSet(toRemove))
+    func removeHoldings(ids: Set<UUID>) {
+        holdings.removeAll { ids.contains($0.id) }
         saveHoldings()
     }
 
