@@ -60,6 +60,8 @@ struct AddHoldingView: View {
                                 }
                             }
                             .foregroundColor(.primary)
+                            .accessibilityLabel("\(s.symbol), \(s.name), \(s.group.rawValue)")
+                            .accessibilityHint("Tap to select this ticker")
                         }
                     }
                 }

@@ -2,6 +2,21 @@ import SwiftUI
 import Foundation
 import SwiftData
 
+// MARK: - Design Tokens
+
+private extension Color {
+    static let bg            = Color(red: 0.06, green: 0.06, blue: 0.08)
+    static let surface       = Color(red: 0.11, green: 0.11, blue: 0.14)
+    static let surface2      = Color(red: 0.15, green: 0.15, blue: 0.18)
+    static let border        = Color.white.opacity(0.07)
+    static let textPrimary   = Color.white
+    static let textSecondary = Color(white: 0.60)
+    static let textTertiary  = Color(white: 0.42)  // raised from 0.35 for contrast
+    static let accent        = Color(red: 0.55, green: 0.45, blue: 1.0) // brighter for WCAG AA
+    static let gain          = Color(red: 0.18, green: 0.78, blue: 0.44)
+    static let loss          = Color(red: 0.95, green: 0.32, blue: 0.32)
+}
+
 // MARK: - Main View
 
 struct ContentView: View {
@@ -16,44 +31,25 @@ struct ContentView: View {
 
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 18) {
+            ZStack(alignment: .bottom) {
+                Color.bg.ignoresSafeArea()
 
-                    header
-
-                    if editMode && !selectedIDs.isEmpty {
-                        Button(action: {
-                            withAnimation {
-                                vm.removeHoldings(ids: selectedIDs)
-                                selectedIDs.removeAll()
-                                editMode = false
-                            }
-                        }) {
-                            Label("Delete \(selectedIDs.count) selected", systemImage: "trash")
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.red)
-                                .cornerRadius(12)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 24) {
+                        header
+                        if vm.holdings.isEmpty {
+                            emptyState
+                        } else {
+                            heroCard
+                            if editMode && !selectedIDs.isEmpty { deleteBar }
+                            holdingsList
                         }
-                        .transition(.move(edge: .top).combined(with: .opacity))
                     }
-
-                    if !vm.holdings.isEmpty { summaryGrid }
-
-                    if vm.holdings.isEmpty {
-                        emptyState
-                    } else {
-                        ForEach(GroupType.allCases, id: \.self) { group in
-                            let items = vm.holdings.filter { $0.group == group }
-                            if !items.isEmpty { section(group) }
-                        }
-                        alertBox
-                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .padding(.bottom, 100)
                 }
-                .padding()
             }
-            .background(Color.black)
             .navigationBarHidden(true)
             .onAppear {
                 guard !contextInjected else { return }
@@ -62,9 +58,7 @@ struct ContentView: View {
                 vm.refreshPrices()
                 vm.startAutoRefresh()
             }
-            .onDisappear {
-                vm.stopAutoRefresh()
-            }
+            .onDisappear { vm.stopAutoRefresh() }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                 vm.refreshPrices()
                 vm.startAutoRefresh()
@@ -84,317 +78,452 @@ struct ContentView: View {
         }
     }
 
-    var header: some View {
-        HStack {
-            VStack(alignment: .leading) {
-                Text("Prosper's Portfolio")
-                    .font(.largeTitle.bold())
-                    .foregroundColor(.white)
+    // MARK: - Header
 
-                Text(vm.lastUpdated)
-                    .foregroundColor(.gray)
-                    .font(.caption)
+    var header: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Portfolio")
+                    .font(.largeTitle.bold())
+                    .foregroundColor(.textPrimary)
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(vm.isLoading ? Color.orange : Color.gain)
+                        .frame(width: 6, height: 6)
+                        .accessibilityHidden(true)
+                    Text(vm.isLoading ? "Updating…" : vm.lastUpdated)
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(.textSecondary)
+                }
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Portfolio, \(vm.isLoading ? "updating prices" : vm.lastUpdated)")
 
             Spacer()
 
-            Button(action: { showAddHolding = true }) {
-                Image(systemName: "plus")
-                    .foregroundColor(.purple)
-                    .padding()
-                    .background(Color.white.opacity(0.08))
-                    .clipShape(Circle())
-            }
-
-            Button(action: {
-                withAnimation {
-                    editMode.toggle()
-                    if !editMode { selectedIDs.removeAll() }
+            HStack(spacing: 10) {
+                if !vm.holdings.isEmpty {
+                    Button(action: {
+                        withAnimation(.spring(response: 0.3)) {
+                            editMode.toggle()
+                            if !editMode { selectedIDs.removeAll() }
+                        }
+                    }) {
+                        Text(editMode ? "Done" : "Edit")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(editMode ? .white : .textSecondary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .background(editMode ? Color.accent : Color.surface)
+                            .clipShape(Capsule())
+                    }
+                    .accessibilityLabel(editMode ? "Done editing" : "Edit holdings")
+                    .accessibilityHint(editMode ? "Exits edit mode" : "Select holdings to delete")
                 }
-            }) {
-                Text(editMode ? "Done" : "Edit")
-                    .foregroundColor(.purple)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(Color.white.opacity(0.08))
+
+                Button(action: { vm.refreshPrices() }) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(vm.isLoading ? .accent : .textSecondary)
+                        .rotationEffect(.degrees(vm.isLoading ? 360 : 0))
+                        .animation(vm.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: vm.isLoading)
+                        .frame(width: 44, height: 44) // 44pt touch target
+                        .background(Color.surface)
+                        .clipShape(Circle())
+                }
+                .accessibilityLabel("Refresh prices")
+                .accessibilityHint("Fetches the latest stock prices")
+
+                Button(action: { showAddHolding = true }) {
+                    Image(systemName: "plus")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundColor(.white)
+                        .frame(width: 44, height: 44) // 44pt touch target
+                        .background(Color.accent)
+                        .clipShape(Circle())
+                }
+                .accessibilityLabel("Add holding")
+                .accessibilityHint("Opens form to add a new stock")
+            }
+        }
+        .padding(.top, 8)
+    }
+
+    // MARK: - Hero Card
+
+    var heroCard: some View {
+        let isPositive = vm.totalPL >= 0
+        let plSign = isPositive ? "up" : "down"
+        return ZStack {
+            RoundedRectangle(cornerRadius: 24)
+                .fill(LinearGradient(
+                    colors: isPositive
+                        ? [Color(red: 0.1, green: 0.28, blue: 0.2), Color(red: 0.08, green: 0.16, blue: 0.12)]
+                        : [Color(red: 0.28, green: 0.1, blue: 0.1), Color(red: 0.16, green: 0.08, blue: 0.08)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(isPositive ? Color.gain.opacity(0.2) : Color.loss.opacity(0.2), lineWidth: 1)
+
+            VStack(spacing: 0) {
+                VStack(spacing: 6) {
+                    Text("Total Value")
+                        .font(.footnote.weight(.medium))
+                        .foregroundColor(.white.opacity(0.6))
+                    Text(money(vm.totalValue))
+                        .font(.system(size: 42, weight: .bold, design: .rounded))
+                        .minimumScaleFactor(0.7)
+                        .foregroundColor(.white)
+                    HStack(spacing: 6) {
+                        Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
+                            .font(.caption.weight(.bold))
+                        Text("\(isPositive ? "+" : "")\(money(vm.totalPL)) (\(String(format: "%+.2f", vm.totalReturn))%)")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .foregroundColor(isPositive ? .gain : .loss)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background((isPositive ? Color.gain : Color.loss).opacity(0.15))
                     .clipShape(Capsule())
-            }
-            .opacity(vm.holdings.isEmpty ? 0 : 1)
+                }
+                .padding(.top, 28)
+                .padding(.bottom, 24)
 
-            Button(action: {
-                vm.refreshPrices()
-            }) {
-                Image(systemName: vm.isLoading ? "arrow.clockwise" : "arrow.clockwise")
-                    .rotationEffect(.degrees(vm.isLoading ? 180 : 0))
-                    .animation(vm.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: vm.isLoading)
-                    .foregroundColor(.purple)
-                    .padding()
-                    .background(Color.white.opacity(0.08))
-                    .clipShape(Circle())
+                Divider().background(Color.white.opacity(0.1))
+
+                HStack {
+                    heroStat("Invested", value: money(vm.totalInvested))
+                    Divider().frame(height: 30).background(Color.white.opacity(0.1))
+                    heroStat("Holdings", value: "\(vm.holdings.count)")
+                    Divider().frame(height: 30).background(Color.white.opacity(0.1))
+                    heroStat("Groups", value: "\(Set(vm.holdings.map { $0.group }).count)")
+                }
+                .padding(.vertical, 16)
+                .padding(.horizontal, 8)
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            "Portfolio summary. Total value \(money(vm.totalValue)), \(plSign) \(money(abs(vm.totalPL))), \(String(format: "%+.2f", vm.totalReturn)) percent overall. Amount invested \(money(vm.totalInvested)). \(vm.holdings.count) holdings."
+        )
     }
 
-    var summaryGrid: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
-
-            summaryCard("Invested", value: money(vm.totalInvested))
-            summaryCard("Current", value: money(vm.totalValue))
-            summaryCard("P&L", value: money(vm.totalPL), color: vm.totalPL >= 0 ? .green : .red)
-            summaryCard("Return", value: "\(String(format: "%.2f", vm.totalReturn))%", color: vm.totalReturn >= 0 ? .green : .red)
-        }
-    }
-
-    func summaryCard(_ title: String, value: String, color: Color = .white) -> some View {
-        VStack(alignment: .leading) {
-            Text(title.uppercased())
-                .font(.caption2)
-                .foregroundColor(.gray)
-
+    func heroStat(_ title: String, value: String) -> some View {
+        VStack(spacing: 3) {
             Text(value)
-                .font(.headline.bold())
-                .foregroundColor(color)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(14)
-    }
-
-    var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "chart.bar.xaxis")
-                .font(.system(size: 48))
-                .foregroundColor(.gray.opacity(0.4))
-            Text("No stocks yet")
-                .font(.headline)
-                .foregroundColor(.gray)
-            Text("Tap + to add your first holding")
-                .font(.caption)
-                .foregroundColor(.gray.opacity(0.6))
+                .font(.headline.weight(.bold))
+                .foregroundColor(.white)
+            Text(title)
+                .font(.caption2.weight(.medium))
+                .foregroundColor(.white.opacity(0.5))
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 60)
     }
 
-    var statusBar: some View {
-        HStack {
-            Image(systemName: "info.circle")
-                .foregroundColor(.purple)
-            Text(vm.lastUpdated)
-                .foregroundColor(.purple)
+    // MARK: - Delete Bar
+
+    var deleteBar: some View {
+        Button(action: {
+            withAnimation(.spring(response: 0.3)) {
+                vm.removeHoldings(ids: selectedIDs)
+                selectedIDs.removeAll()
+                editMode = false
+            }
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: "trash")
+                    .font(.subheadline.weight(.semibold))
+                Text("Remove \(selectedIDs.count) holding\(selectedIDs.count == 1 ? "" : "s")")
+                    .font(.body.weight(.semibold))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(Color.loss)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color.purple.opacity(0.15))
-        .cornerRadius(12)
+        .accessibilityLabel("Delete \(selectedIDs.count) selected holding\(selectedIDs.count == 1 ? "" : "s")")
+        .accessibilityHint("Permanently removes the selected holdings from your portfolio")
+        .transition(.move(edge: .top).combined(with: .opacity))
     }
 
-    func section(_ group: GroupType) -> some View {
-        let items = vm.holdings.filter { $0.group == group }
+    // MARK: - Holdings List
 
-        return VStack(alignment: .leading, spacing: 10) {
-            Text(group.rawValue.uppercased())
-                .font(.caption)
-                .foregroundColor(.gray)
-
-            VStack(spacing: 10) {
-                ForEach(items) { item in
-                    HStack(spacing: 10) {
-                        if editMode {
-                            Image(systemName: selectedIDs.contains(item.id) ? "checkmark.circle.fill" : "circle")
-                                .font(.title3)
-                                .foregroundColor(selectedIDs.contains(item.id) ? .red : .gray)
-                                .onTapGesture {
-                                    withAnimation {
-                                        if selectedIDs.contains(item.id) {
-                                            selectedIDs.remove(item.id)
-                                        } else {
-                                            selectedIDs.insert(item.id)
-                                        }
-                                    }
-                                }
-                        }
-                        row(item)
-                            .onTapGesture {
-                                guard editMode else { return }
-                                withAnimation {
-                                    if selectedIDs.contains(item.id) {
-                                        selectedIDs.remove(item.id)
-                                    } else {
-                                        selectedIDs.insert(item.id)
-                                    }
-                                }
-                            }
-                            .overlay {
-                                if editMode && selectedIDs.contains(item.id) {
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.red, lineWidth: 2)
-                                }
-                            }
-                    }
+    var holdingsList: some View {
+        VStack(spacing: 28) {
+            ForEach(GroupType.allCases, id: \.self) { group in
+                let items = vm.holdings.filter { $0.group == group }
+                if !items.isEmpty {
+                    sectionView(group: group, items: items)
                 }
             }
-            .padding()
-            .background(Color.white.opacity(0.04))
-            .cornerRadius(16)
         }
     }
 
-    func row(_ h: Holding) -> some View {
-        let priceData = vm.prices[h.sym]
-        let px = priceData?.price ?? h.cost
-        let dayChange = priceData?.dayChangePercent ?? 0
-        let pnl = (px - h.cost) * h.shares
-        let pnlPercent = ((px - h.cost) / h.cost) * 100
-        let isUp = dayChange >= 0
-        let smartStatus = vm.smartStatus(for: h)
-        let isEarningsWeek = vm.isEarningsThisWeek(h.sym)
-        let accentColor: Color = isUp ? .green : .red
+    func sectionView(group: GroupType, items: [Holding]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(group.rawValue)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.textTertiary)
+                    .textCase(.uppercase)
+                    .kerning(0.8)
+                Spacer()
+                Text("\(items.count)")
+                    .font(.caption.weight(.medium))
+                    .foregroundColor(.textTertiary)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(group.rawValue), \(items.count) holding\(items.count == 1 ? "" : "s")")
+
+            VStack(spacing: 2) {
+                ForEach(items) { item in
+                    rowView(item)
+                        .onTapGesture {
+                            guard editMode else { return }
+                            withAnimation(.spring(response: 0.2)) {
+                                if selectedIDs.contains(item.id) { selectedIDs.remove(item.id) }
+                                else { selectedIDs.insert(item.id) }
+                            }
+                        }
+                }
+            }
+            .background(Color.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.border, lineWidth: 1))
+        }
+    }
+
+    // MARK: - Row
+
+    func rowView(_ h: Holding) -> some View {
+        let priceData  = vm.prices[h.sym]
+        let px         = priceData?.price ?? h.cost
+        let dayChange  = priceData?.dayChangePercent ?? 0
+        let pnl        = (px - h.cost) * h.shares
+        let pnlPct     = ((px - h.cost) / h.cost) * 100
+        let isUp       = dayChange >= 0
+        let status     = vm.smartStatus(for: h)
+        let isSelected = selectedIDs.contains(h.id)
+        let pnlSign    = pnl >= 0 ? "gain" : "loss"
+        let daySign    = isUp ? "up" : "down"
 
         return VStack(spacing: 0) {
-            // Colored top bar indicating up/down
-            Rectangle()
-                .fill(priceData != nil ? accentColor : Color.clear)
-                .frame(height: 3)
-                .cornerRadius(3)
-
-            VStack(spacing: 8) {
-                HStack(alignment: .top) {
-                    // Left: ticker + name + badges
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            Text(h.sym)
-                                .font(.headline.bold())
-                                .foregroundColor(.white)
-                            if isEarningsWeek {
-                                Text("📈").font(.caption)
-                            }
-                        }
-                        Text(h.name)
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                        Text("\(String(format: "%.4g", h.shares)) shares @ \(money(h.cost))")
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                    }
-
-                    Spacer()
-
-                    // Right: current price (big) + day change
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(money(px))
-                            .font(.title3.bold())
-                            .foregroundColor(.white)
-
-                        if priceData != nil {
-                            HStack(spacing: 3) {
-                                Image(systemName: isUp ? "arrow.up.right" : "arrow.down.right")
-                                    .font(.caption2.bold())
-                                Text(String(format: "%.2f%%", abs(dayChange)))
-                                    .font(.caption.bold())
-                            }
-                            .foregroundColor(accentColor)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(accentColor.opacity(0.15))
-                            .cornerRadius(4)
-                        }
-
-                        // After-hours price
-                        if let extPx = priceData?.extendedPrice,
-                           let extChg = priceData?.extendedChangePercent {
-                            HStack(spacing: 3) {
-                                Text(money(extPx))
-                                    .font(.caption.bold())
-                                Text(String(format: "%+.2f%%", extChg))
-                                    .font(.caption2)
-                            }
-                            .foregroundColor(extChg >= 0 ? .green : .red)
-                            .opacity(0.85)
-
-                            Text("after hours")
-                                .font(.caption2)
-                                .foregroundColor(.gray)
-                        }
-                    }
+            HStack(spacing: 12) {
+                if editMode {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.title3)
+                        .foregroundColor(isSelected ? .loss : .textTertiary)
+                        .animation(.spring(response: 0.2), value: isSelected)
+                        .accessibilityHidden(true)
                 }
 
-                // Bottom: status badge + P&L + earnings
-                HStack {
-                    VStack(alignment: .leading, spacing: 3) {
-                        statusBadge(smartStatus)
-                        if !smartStatus.reasons.isEmpty {
-                            Text(smartStatus.reasons.joined(separator: " · "))
-                                .font(.caption2)
-                                .foregroundColor(.gray.opacity(0.7))
+                // Ticker avatar
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.surface2)
+                        .frame(width: 42, height: 42)
+                    Text(h.sym)
+                        .font(.system(size: h.sym.count > 3 ? 9 : 11, weight: .bold, design: .rounded))
+                        .foregroundColor(.white) // white on surface2 guarantees contrast
+                        .minimumScaleFactor(0.5)
+                        .lineLimit(1)
+                        .padding(4)
+                }
+                .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(h.sym)
+                            .font(.body.weight(.bold))
+                            .foregroundColor(.textPrimary)
+                        statusPill(status)
+                        if vm.isEarningsThisWeek(h.sym) {
+                            Text("EARNINGS")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(.orange)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.orange.opacity(0.15))
+                                .clipShape(Capsule())
                         }
                     }
+                    Text(h.name)
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                        .lineLimit(1)
+                }
 
-                    Spacer()
+                Spacer()
 
-                    VStack(alignment: .trailing, spacing: 1) {
-                        Text("\(pnl >= 0 ? "+" : "")\(money(pnl))")
-                            .font(.caption.bold())
-                            .foregroundColor(pnl >= 0 ? .green : .red)
-                        Text("\(pnlPercent >= 0 ? "+" : "")\(String(format: "%.1f", pnlPercent))% overall")
-                            .font(.caption2)
-                            .foregroundColor(pnl >= 0 ? .green.opacity(0.8) : .red.opacity(0.8))
-                    }
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(money(px))
+                        .font(.body.weight(.bold))
+                        .foregroundColor(.textPrimary)
 
-                    if isEarningsWeek, let info = vm.earningsDates[h.sym] {
-                        Text("Earnings: \(info.label)")
-                            .font(.caption2)
-                            .foregroundColor(.orange)
-                            .padding(.leading, 8)
+                    if priceData != nil {
+                        HStack(spacing: 2) {
+                            Image(systemName: isUp ? "arrow.up.right" : "arrow.down.right")
+                                .font(.system(size: 9, weight: .bold))
+                            Text(String(format: "%.2f%%", abs(dayChange)))
+                                .font(.caption.weight(.semibold))
+                        }
+                        .foregroundColor(isUp ? .gain : .loss)
                     }
                 }
             }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(isSelected ? Color.loss.opacity(0.08) : Color.clear)
+            .animation(.easeInOut(duration: 0.15), value: isSelected)
+
+            if priceData != nil {
+                HStack(spacing: 0) {
+                    detailCell(label: "P&L",      value: "\(pnl >= 0 ? "+" : "")\(money(pnl))",          color: pnl >= 0 ? .gain : .loss)
+                    detailCell(label: "Return",   value: String(format: "%+.1f%%", pnlPct),               color: pnlPct >= 0 ? .gain : .loss)
+                    detailCell(label: "Shares",   value: String(format: "%.4g", h.shares),                color: .textSecondary)
+                    detailCell(label: "Avg Cost", value: money(h.cost),                                   color: .textSecondary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+
+                if let extPx = priceData?.extendedPrice, let extChg = priceData?.extendedChangePercent {
+                    HStack(spacing: 6) {
+                        Image(systemName: "moon.stars")
+                            .font(.caption2)
+                            .foregroundColor(.textTertiary)
+                            .accessibilityHidden(true)
+                        Text("After hours")
+                            .font(.caption.weight(.medium))
+                            .foregroundColor(.textTertiary)
+                        Text(money(extPx))
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.textSecondary)
+                        Text(String(format: "%+.2f%%", extChg))
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(extChg >= 0 ? .gain : .loss)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("After hours price \(money(extPx)), \(extChg >= 0 ? "up" : "down") \(String(format: "%.2f", abs(extChg))) percent")
+                }
+
+                if !status.reasons.isEmpty {
+                    Text(status.reasons.joined(separator: "  ·  "))
+                        .font(.caption2)
+                        .foregroundColor(.textSecondary)
+                        .lineLimit(2)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 12)
+                        .accessibilityLabel("Signals: \(status.reasons.joined(separator: ", "))")
+                }
+            }
+
+            Rectangle()
+                .fill(Color.border)
+                .frame(height: 1)
+                .padding(.leading, 70)
+                .accessibilityHidden(true)
         }
-        .background(Color.white.opacity(0.03))
-        .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(priceData != nil ? accentColor.opacity(0.2) : Color.clear, lineWidth: 1))
+        // Single VoiceOver element per row with full context
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(rowAccessibilityLabel(h, px: px, dayChange: dayChange, pnl: pnl, pnlPct: pnlPct, status: status, daySign: daySign, pnlSign: pnlSign, priceData: priceData))
+        .accessibilityHint(editMode ? "Double tap to \(isSelected ? "deselect" : "select") for deletion" : "")
+        .accessibilityAddTraits(editMode && isSelected ? .isSelected : [])
     }
 
-    @ViewBuilder
-    func statusBadge(_ status: SmartStatus) -> some View {
-        let (bgColor, textColor) = badgeColors(for: status.status)
-
-        Text(status.label)
-            .font(.caption2)
-            .fontWeight(.semibold)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(bgColor)
-            .foregroundColor(textColor)
-            .cornerRadius(6)
+    private func rowAccessibilityLabel(_ h: Holding, px: Double, dayChange: Double, pnl: Double, pnlPct: Double, status: SmartStatus, daySign: String, pnlSign: String, priceData: PriceData?) -> String {
+        var label = "\(h.name), \(h.sym). Current price \(money(px))."
+        if priceData != nil {
+            label += " \(daySign) \(String(format: "%.2f", abs(dayChange))) percent today."
+            label += " P&L \(pnlSign) \(money(abs(pnl))), \(String(format: "%.1f", abs(pnlPct))) percent overall."
+        }
+        label += " Signal: \(status.label)."
+        if vm.isEarningsThisWeek(h.sym) { label += " Earnings this week." }
+        return label
     }
 
-    func badgeColors(for status: SmartStatusType) -> (bg: Color, text: Color) {
-        switch status {
-        case .strongBuy: return (Color.green.opacity(0.3), .green)
-        case .buy:       return (Color.green.opacity(0.2), .green)
-        case .hold:      return (Color.gray.opacity(0.2),  .gray)
-        case .watch:     return (Color.blue.opacity(0.2),  .blue)
-        case .review:    return (Color.red.opacity(0.2),   .red)
-        case .trim:      return (Color.yellow.opacity(0.2), .yellow)
+    func detailCell(label: String, value: String, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(color)
+            Text(label)
+                .font(.caption2.weight(.medium))
+                .foregroundColor(.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Status Pill
+
+    func statusPill(_ status: SmartStatus) -> some View {
+        let (bg, fg) = statusColors(status.status)
+        return Text(status.label)
+            .font(.system(size: 9, weight: .bold))
+            .foregroundColor(fg)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(bg)
+            .clipShape(Capsule())
+            .accessibilityHidden(true) // spoken as part of row label
+    }
+
+    func statusColors(_ s: SmartStatusType) -> (Color, Color) {
+        switch s {
+        case .strongBuy: return (Color.gain.opacity(0.2),    .gain)
+        case .buy:       return (Color.gain.opacity(0.15),   .gain)
+        case .hold:      return (Color.white.opacity(0.08),  .textSecondary)
+        case .watch:     return (Color.blue.opacity(0.15),   .blue)
+        case .trim:      return (Color.orange.opacity(0.15), .orange)
+        case .review:    return (Color.loss.opacity(0.15),   .loss)
         }
     }
 
-    var alertBox: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("🔔 Trading Alerts")
-                .font(.headline)
+    // MARK: - Empty State
+
+    var emptyState: some View {
+        VStack(spacing: 20) {
+            Spacer().frame(height: 40)
+            ZStack {
+                Circle()
+                    .fill(Color.surface)
+                    .frame(width: 80, height: 80)
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.system(size: 32, weight: .light))
+                    .foregroundColor(.accent)
+            }
+            .accessibilityHidden(true)
+            VStack(spacing: 8) {
+                Text("No holdings yet")
+                    .font(.title3.weight(.bold))
+                    .foregroundColor(.textPrimary)
+                Text("Add your first stock to start\ntracking your portfolio")
+                    .font(.subheadline)
+                    .foregroundColor(.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            Button(action: { showAddHolding = true }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus").font(.subheadline.weight(.bold))
+                    Text("Add Holding").font(.body.weight(.semibold))
+                }
                 .foregroundColor(.white)
-
-            Text("Use TradingView to set alerts like META below $600.")
-                .foregroundColor(.gray)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 14)
+                .background(Color.accent)
+                .clipShape(Capsule())
+            }
+            .accessibilityLabel("Add your first holding")
+            .accessibilityHint("Opens form to search and add a stock")
+            .padding(.top, 4)
         }
-        .padding()
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(16)
+        .frame(maxWidth: .infinity)
     }
+
+    // MARK: - Helpers
 
     private let currencyFormatter: NumberFormatter = {
         let f = NumberFormatter()
@@ -409,8 +538,6 @@ struct ContentView: View {
         currencyFormatter.string(from: NSNumber(value: value)) ?? "$\(String(format: "%.2f", value))"
     }
 }
-
-// MARK: - App Entry
 
 #Preview {
     ContentView()
