@@ -78,6 +78,29 @@ class PortfolioViewModel: ObservableObject {
         }
     }
 
+    func syncFromSupabase() {
+        Task {
+            guard await SupabaseService.shared.isConfigured else { return }
+            do {
+                let remote = try await SupabaseService.shared.fetchHoldings()
+                let localSyms = Set(holdings.map { $0.sym })
+                // Insert any remote holdings not in local cache
+                var added = false
+                for h in remote where !localSyms.contains(h.sym) {
+                    modelContext.insert(Holding(sym: h.sym, name: h.name, shares: h.shares, cost: h.cost, group: h.group))
+                    added = true
+                }
+                if added {
+                    save()
+                    loadHoldings()
+                    await fetchPrices(for: holdings.map { $0.sym })
+                }
+            } catch {
+                errorMessage = "Sync failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
     func addHolding(_ holding: Holding) {
         guard !holdings.contains(where: { $0.sym == holding.sym }) else {
             errorMessage = "\(holding.sym) is already in your portfolio"
@@ -86,14 +109,41 @@ class PortfolioViewModel: ObservableObject {
         modelContext.insert(holding)
         save()
         loadHoldings()
-        Task { await fetchPrices(for: [holding.sym]) }
+        Task {
+            // Sync to Supabase
+            if await SupabaseService.shared.isConfigured {
+                let local = HoldingLocal(sym: holding.sym, name: holding.name, shares: holding.shares, cost: holding.cost, group: holding.group)
+                try? await SupabaseService.shared.insert(local)
+            }
+            await fetchPrices(for: [holding.sym])
+        }
+    }
+
+    func updateHolding(_ holding: Holding, additionalShares: Double, pricePerShare: Double) {
+        let totalShares = holding.shares + additionalShares
+        let newAvgCost = ((holding.shares * holding.cost) + (additionalShares * pricePerShare)) / totalShares
+        holding.shares = totalShares
+        holding.cost = newAvgCost
+        save()
+        loadHoldings()
+        Task {
+            if await SupabaseService.shared.isConfigured {
+                try? await SupabaseService.shared.upsertHolding(sym: holding.sym, shares: totalShares, cost: newAvgCost)
+            }
+        }
     }
 
     func removeHoldings(ids: Set<PersistentIdentifier>) {
-        ids.compactMap { modelContext.model(for: $0) as? Holding }
-            .forEach { modelContext.delete($0) }
+        let toDelete = ids.compactMap { modelContext.model(for: $0) as? Holding }
+        let syms = toDelete.map { $0.sym }
+        toDelete.forEach { modelContext.delete($0) }
         save()
         loadHoldings()
+        Task {
+            if await SupabaseService.shared.isConfigured {
+                try? await SupabaseService.shared.delete(syms: syms)
+            }
+        }
     }
 
     private func save() {

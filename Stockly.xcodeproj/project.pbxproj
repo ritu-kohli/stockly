@@ -22,6 +22,13 @@
 		7B1D65992C7BA8B300B82A44 /* StocklyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1D65982C7BA8B300B82A44 /* StocklyUITests.swift */; };
 		7B1D659B2C7BA8B300B82A44 /* StocklyUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1D659A2C7BA8B300B82A44 /* StocklyUITestsLaunchTests.swift */; };
 		AA000001AA000001AA000001 /* AddHoldingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001AA000001AA000002 /* AddHoldingView.swift */; };
+		BB000001BB000001BB000001 /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000001BB000001BB000002 /* SupabaseService.swift */; };
+		BB000002BB000002BB000001 /* BackupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000002BB000002BB000002 /* BackupService.swift */; };
+		BB000003BB000003BB000001 /* NewsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000003BB000003BB000002 /* NewsService.swift */; };
+		BB000004BB000004BB000001 /* StockDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000004BB000004BB000002 /* StockDetailView.swift */; };
+		BB000005BB000005BB000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000005BB000005BB000002 /* SettingsView.swift */; };
+		BB000006BB000006BB000001 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000006BB000006BB000002 /* Keychain.swift */; };
+		BB000007BB000007BB000001 /* AddPositionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000007BB000007BB000002 /* AddPositionView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,6 +67,13 @@
 		7B1D65982C7BA8B300B82A44 /* StocklyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StocklyUITests.swift; sourceTree = "<group>"; };
 		7B1D659A2C7BA8B300B82A44 /* StocklyUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StocklyUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		AA000001AA000001AA000002 /* AddHoldingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddHoldingView.swift; sourceTree = "<group>"; };
+		BB000001BB000001BB000002 /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
+		BB000002BB000002BB000002 /* BackupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupService.swift; sourceTree = "<group>"; };
+		BB000003BB000003BB000002 /* NewsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsService.swift; sourceTree = "<group>"; };
+		BB000004BB000004BB000002 /* StockDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StockDetailView.swift; sourceTree = "<group>"; };
+		BB000005BB000005BB000002 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		BB000006BB000006BB000002 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
+		BB000007BB000007BB000002 /* AddPositionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPositionView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -122,6 +136,13 @@
 				5AB6C0E12FA30AED00C44216 /* PortfolioViewModel.swift */,
 				5AB6C0E32FA30B1A00C44216 /* Models.swift */,
 				AA000001AA000001AA000002 /* AddHoldingView.swift */,
+				BB000001BB000001BB000002 /* SupabaseService.swift */,
+				BB000002BB000002BB000002 /* BackupService.swift */,
+				BB000003BB000003BB000002 /* NewsService.swift */,
+				BB000004BB000004BB000002 /* StockDetailView.swift */,
+				BB000005BB000005BB000002 /* SettingsView.swift */,
+				BB000006BB000006BB000002 /* Keychain.swift */,
+				BB000007BB000007BB000002 /* AddPositionView.swift */,
 			);
 			path = Stockly;
 			sourceTree = "<group>";
@@ -285,6 +306,13 @@
 				5AB6C0E22FA30AED00C44216 /* PortfolioViewModel.swift in Sources */,
 				5AB6C0E42FA30B1A00C44216 /* Models.swift in Sources */,
 				AA000001AA000001AA000001 /* AddHoldingView.swift in Sources */,
+				BB000001BB000001BB000001 /* SupabaseService.swift in Sources */,
+				BB000002BB000002BB000001 /* BackupService.swift in Sources */,
+				BB000003BB000003BB000001 /* NewsService.swift in Sources */,
+				BB000004BB000004BB000001 /* StockDetailView.swift in Sources */,
+				BB000005BB000005BB000001 /* SettingsView.swift in Sources */,
+				BB000006BB000006BB000001 /* Keychain.swift in Sources */,
+				BB000007BB000007BB000001 /* AddPositionView.swift in Sources */,
 				7B1D65802C7BA8B200B82A44 /* Item.swift in Sources */,
 				7B1D657C2C7BA8B200B82A44 /* StocklyApp.swift in Sources */,
 				5AB6C0EF2FA47B0500C44216 /* SettingsView.swift in Sources */,

@@ -1,14 +1,77 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject var vm: PortfolioViewModel
     @State private var apiKey: String = Keychain.claudeKey ?? ""
     @State private var isRevealed = false
     @State private var saved = false
+    @State private var exportURL: URL?
+    @State private var showExporter = false
+    @State private var showImporter = false
+    @State private var importResult: String?
+    @State private var showImportResult = false
+    @State private var supabaseURL: String = Keychain.supabaseURL ?? ""
+    @State private var supabaseKey: String = Keychain.supabaseAnonKey ?? ""
+    @State private var isSupabaseKeyRevealed = false
 
     var body: some View {
         NavigationView {
             Form {
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "cylinder.split.1x2")
+                                .foregroundColor(.green)
+                            Text("Supabase Database")
+                                .font(.headline)
+                        }
+                        Text("Connect to Supabase to persist your portfolio in the cloud. Data survives app deletion and works across devices.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 4)
+
+                    TextField("Project URL (https://xxx.supabase.co)", text: $supabaseURL)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .font(.system(.footnote, design: .monospaced))
+
+                    HStack {
+                        Group {
+                            if isSupabaseKeyRevealed {
+                                TextField("Anon Key", text: $supabaseKey)
+                                    .autocorrectionDisabled()
+                                    .textInputAutocapitalization(.never)
+                            } else {
+                                SecureField("Anon Key", text: $supabaseKey)
+                            }
+                        }
+                        .font(.system(.footnote, design: .monospaced))
+                        Button(action: { isSupabaseKeyRevealed.toggle() }) {
+                            Image(systemName: isSupabaseKeyRevealed ? "eye.slash" : "eye")
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } header: {
+                    Text("Cloud Storage")
+                } footer: {
+                    Text("Get these from your Supabase project → Settings → API. Both are stored securely in the iOS Keychain.")
+                }
+
+                Section {
+                    Link(destination: URL(string: "https://supabase.com")!) {
+                        Label("Create Supabase Project", systemImage: "arrow.up.right.square")
+                    }
+                } header: {
+                    Text("Supabase Setup")
+                } footer: {
+                    Text("Run this SQL in your Supabase SQL editor:\n\nCREATE TABLE holdings (\n  id text PRIMARY KEY,\n  sym text NOT NULL,\n  name text NOT NULL,\n  shares float8 NOT NULL,\n  cost float8 NOT NULL,\n  stock_group text NOT NULL,\n  created_at timestamptz DEFAULT now()\n);\n\nALTER TABLE holdings ENABLE ROW LEVEL SECURITY;\nCREATE POLICY \"Allow all\" ON holdings FOR ALL USING (true);")
+                        .font(.system(.caption2, design: .monospaced))
+                }
+
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
@@ -80,6 +143,8 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         Keychain.claudeKey = apiKey.trimmingCharacters(in: .whitespaces)
+                        Keychain.supabaseURL = supabaseURL.trimmingCharacters(in: .whitespaces)
+                        Keychain.supabaseAnonKey = supabaseKey.trimmingCharacters(in: .whitespaces)
                         saved = true
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { dismiss() }
                     }

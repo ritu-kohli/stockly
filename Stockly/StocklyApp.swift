@@ -7,6 +7,6 @@ struct StocklyApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: Holding.self)
+        .modelContainer(for: Holding.self, isUndoEnabled: false)
     }
 }

@@ -30,6 +30,7 @@ struct ContentView: View {
     @State private var showError = false
     @State private var showSettings = false
     @State private var selectedHolding: Holding?
+    @State private var addPositionHolding: Holding?
 
     var body: some View {
         NavigationView {
@@ -43,7 +44,6 @@ struct ContentView: View {
                             emptyState
                         } else {
                             heroCard
-                            if editMode && !selectedIDs.isEmpty { deleteBar }
                             holdingsList
                         }
                     }
@@ -57,6 +57,7 @@ struct ContentView: View {
                 guard !contextInjected else { return }
                 contextInjected = true
                 vm.updateContext(modelContext)
+                vm.syncFromSupabase()
                 vm.refreshPrices()
                 vm.startAutoRefresh()
             }
@@ -79,10 +80,13 @@ struct ContentView: View {
             AddHoldingView(vm: vm)
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView()
+            SettingsView(vm: vm)
         }
         .sheet(item: $selectedHolding) { holding in
             StockDetailView(holding: holding, vm: vm)
+        }
+        .sheet(item: $addPositionHolding) { holding in
+            AddPositionView(holding: holding, vm: vm)
         }
     }
 
@@ -111,19 +115,42 @@ struct ContentView: View {
 
             HStack(spacing: 10) {
                 if !vm.holdings.isEmpty {
+                    if editMode && !selectedIDs.isEmpty {
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3)) {
+                                vm.removeHoldings(ids: selectedIDs)
+                                selectedIDs.removeAll()
+                                editMode = false
+                            }
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "trash")
+                                    .font(.caption.weight(.semibold))
+                                Text("Delete (\(selectedIDs.count))")
+                                    .font(.caption.weight(.semibold))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(Color.loss)
+                            .clipShape(Capsule())
+                        }
+                        .accessibilityLabel("Delete \(selectedIDs.count) selected holdings")
+                        .transition(.scale.combined(with: .opacity))
+                    }
+
                     Button(action: {
                         withAnimation(.spring(response: 0.3)) {
                             editMode.toggle()
                             if !editMode { selectedIDs.removeAll() }
                         }
                     }) {
-                        Text(editMode ? "Done" : "Edit")
+                        Image(systemName: editMode ? "checkmark" : "trash")
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(editMode ? .white : .textSecondary)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 7)
+                            .frame(width: 44, height: 44)
                             .background(editMode ? Color.accent : Color.surface)
-                            .clipShape(Capsule())
+                            .clipShape(Circle())
                     }
                     .accessibilityLabel(editMode ? "Done editing" : "Edit holdings")
                     .accessibilityHint(editMode ? "Exits edit mode" : "Select holdings to delete")
@@ -239,33 +266,6 @@ struct ContentView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - Delete Bar
-
-    var deleteBar: some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.3)) {
-                vm.removeHoldings(ids: selectedIDs)
-                selectedIDs.removeAll()
-                editMode = false
-            }
-        }) {
-            HStack(spacing: 8) {
-                Image(systemName: "trash")
-                    .font(.subheadline.weight(.semibold))
-                Text("Remove \(selectedIDs.count) holding\(selectedIDs.count == 1 ? "" : "s")")
-                    .font(.body.weight(.semibold))
-            }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(Color.loss)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-        }
-        .accessibilityLabel("Delete \(selectedIDs.count) selected holding\(selectedIDs.count == 1 ? "" : "s")")
-        .accessibilityHint("Permanently removes the selected holdings from your portfolio")
-        .transition(.move(edge: .top).combined(with: .opacity))
-    }
-
     // MARK: - Holdings List
 
     var holdingsList: some View {
@@ -298,7 +298,22 @@ struct ContentView: View {
             VStack(spacing: 2) {
                 ForEach(items) { item in
                     rowView(item)
-                        .onTapGesture {
+                        .contentShape(Rectangle())
+                        .contextMenu {
+                            Button(action: { addPositionHolding = item }) {
+                                Label("Add to Position", systemImage: "plus.circle")
+                            }
+                            Button(action: { selectedHolding = item }) {
+                                Label("View Analysis", systemImage: "chart.bar.xaxis")
+                            }
+                            Divider()
+                            Button(role: .destructive, action: {
+                                vm.removeHoldings(ids: [item.id])
+                            }) {
+                                Label("Remove", systemImage: "trash")
+                            }
+                        }
+                        .simultaneousGesture(TapGesture().onEnded {
                             if editMode {
                                 withAnimation(.spring(response: 0.2)) {
                                     if selectedIDs.contains(item.id) { selectedIDs.remove(item.id) }
@@ -307,7 +322,7 @@ struct ContentView: View {
                             } else {
                                 selectedHolding = item
                             }
-                        }
+                        })
                 }
             }
             .background(Color.surface)
