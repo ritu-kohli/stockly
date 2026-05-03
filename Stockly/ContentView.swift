@@ -11,7 +11,7 @@ extension Color {
     static let border        = Color.white.opacity(0.07)
     static let textPrimary   = Color.white
     static let textSecondary = Color(white: 0.60)
-    static let textTertiary  = Color(white: 0.42)  // raised from 0.35 for contrast
+    static let textTertiary  = Color(white: 0.80)  // raised from 0.35 for contrast
     static let accent        = Color(red: 0.55, green: 0.45, blue: 1.0) // brighter for WCAG AA
     static let gain          = Color(red: 0.18, green: 0.78, blue: 0.44)
     static let loss          = Color(red: 0.95, green: 0.32, blue: 0.32)
@@ -31,6 +31,7 @@ struct ContentView: View {
     @State private var showSettings = false
     @State private var selectedHolding: Holding?
     @State private var addPositionHolding: Holding?
+    @State private var showDisclaimer = !UserDefaults.standard.bool(forKey: "disclaimer_shown")
 
     var body: some View {
         NavigationView {
@@ -40,6 +41,20 @@ struct ContentView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
                         header
+                        if vm.isOffline {
+                            HStack(spacing: 8) {
+                                Image(systemName: "wifi.slash")
+                                    .font(.caption)
+                                Text("Offline — showing cached data")
+                                    .font(.caption.weight(.medium))
+                            }
+                            .foregroundColor(.orange)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color.orange.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        }
                         if vm.holdings.isEmpty {
                             emptyState
                         } else {
@@ -87,6 +102,9 @@ struct ContentView: View {
         }
         .sheet(item: $addPositionHolding) { holding in
             AddPositionView(holding: holding, vm: vm)
+        }
+        .sheet(isPresented: $showDisclaimer) {
+            DisclaimerView()
         }
     }
 
@@ -356,18 +374,18 @@ struct ContentView: View {
                 }
 
                 // Ticker avatar
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.surface2)
-                        .frame(width: 42, height: 42)
-                    Text(h.sym)
-                        .font(.system(size: h.sym.count > 3 ? 9 : 11, weight: .bold, design: .rounded))
-                        .foregroundColor(.white) // white on surface2 guarantees contrast
-                        .minimumScaleFactor(0.5)
-                        .lineLimit(1)
-                        .padding(4)
-                }
-                .accessibilityHidden(true)
+//                ZStack {
+//                    RoundedRectangle(cornerRadius: 10)
+//                        .fill(Color.surface2)
+//                        .frame(width: 42, height: 42)
+//                    Text(h.sym)
+//                        .font(.system(size: h.sym.count > 3 ? 9 : 11, weight: .bold, design: .rounded))
+//                        .foregroundColor(.white) // white on surface2 guarantees contrast
+//                        .minimumScaleFactor(0.5)
+//                        .lineLimit(1)
+//                        .padding(4)
+//                }
+//                .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
@@ -446,15 +464,18 @@ struct ContentView: View {
                     .accessibilityLabel("After hours price \(money(extPx)), \(extChg >= 0 ? "up" : "down") \(String(format: "%.2f", abs(extChg))) percent")
                 }
 
-                if !status.reasons.isEmpty {
-                    Text(status.reasons.joined(separator: "  ·  "))
-                        .font(.caption2)
-                        .foregroundColor(.textSecondary)
-                        .lineLimit(2)
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 12)
-                        .accessibilityLabel("Signals: \(status.reasons.joined(separator: ", "))")
-                }
+//                if !status.reasons.isEmpty {
+//                    ScrollView(.horizontal, showsIndicators: false) {
+//                        HStack(spacing: 6) {
+//                            ForEach(status.reasons, id: \.self) { reason in
+////                                SignalPill(reason: reason)
+//                            }
+//                        }
+//                        .padding(.horizontal, 16)
+//                    }
+//                    .padding(.bottom, 12)
+//                    .accessibilityLabel("Signals: \(status.reasons.joined(separator: ", "))")
+//                }
             }
 
             Rectangle()

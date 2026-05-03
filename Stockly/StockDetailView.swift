@@ -135,14 +135,62 @@ struct StockDetailView: View {
                         .kerning(0.6)
                     FlowLayout(spacing: 6) {
                         ForEach(smartStatus.reasons, id: \.self) { reason in
-                            Text(reason)
-                                .font(.caption2.weight(.medium))
-                                .foregroundColor(.textSecondary)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.surface2)
-                                .clipShape(Capsule())
+                            SignalPill(reason: reason)
                         }
+                    }
+                }
+            }
+
+            // Risk metrics
+            if let p = priceData, p.beta != nil || p.sharpeRatio != nil {
+                Divider().background(Color.border)
+                Text("Risk & Return")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.textTertiary)
+                    .textCase(.uppercase)
+                    .kerning(0.6)
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 12) {
+                    if let beta = p.beta {
+                        riskCell("Beta", value: String(format: "%.2f", beta),
+                                 color: beta > 1.5 ? .loss : beta < 0.8 ? .gain : .textSecondary,
+                                 hint: beta > 1.5 ? "High volatility" : beta < 0.8 ? "Low volatility" : "Market-like",
+                                 tooltip: "Beta measures how much this stock moves relative to the S&P 500. Beta 1.0 = moves with the market. Beta 1.5 = moves 50% more than the market (up AND down). Beta 0.5 = moves half as much. High beta stocks can make more in bull markets but lose more in bear markets.")
+                    }
+                    if let sharpe = p.sharpeRatio {
+                        riskCell("Sharpe", value: String(format: "%.2f", sharpe),
+                                 color: sharpe > 1 ? .gain : sharpe < 0 ? .loss : .textSecondary,
+                                 hint: sharpe > 1 ? "Good risk-adj return" : sharpe < 0 ? "Return below risk-free" : "Average",
+                                 tooltip: "Sharpe ratio measures return per unit of risk. Above 1.0 is good — you're being well compensated for the risk taken. Below 0 means the stock returned less than a risk-free savings account after adjusting for volatility. Higher is better.")
+                    }
+                    if let vol = p.annualizedVolatility {
+                        riskCell("Volatility", value: String(format: "%.1f%%", vol),
+                                 color: vol > 40 ? .loss : vol < 20 ? .gain : .textSecondary,
+                                 hint: vol > 40 ? "High — large swings" : vol < 20 ? "Low — stable" : "Medium",
+                                 tooltip: "Annualised volatility measures how much the stock price swings up and down over a year. 20% means the stock typically moves ±20% from its average in a year. S&P 500 averages ~15-18%. Above 40% means very large price swings — higher potential reward but higher risk of loss.")
+                    }
+                    if let dd = p.maxDrawdown {
+                        riskCell("Max Drawdown", value: String(format: "-%.1f%%", dd),
+                                 color: dd > 30 ? .loss : dd < 15 ? .gain : .textSecondary,
+                                 hint: dd > 30 ? "Large peak-to-trough" : dd < 15 ? "Resilient" : "Moderate",
+                                 tooltip: "Max drawdown is the largest peak-to-trough decline over the past year. If you had bought at the worst possible time, this is how much you would have lost before recovery. -30% means at some point this year the stock fell 30% from its high.")
+                    }
+                    if let ret = p.return1y {
+                        riskCell("1Y Price", value: String(format: "%+.1f%%", ret),
+                                 color: ret > 0 ? .gain : .loss,
+                                 hint: "Stock price change over 1 year",
+                                 tooltip: "This is the stock's price change over the past 12 months — not your personal return. Your return depends on when you bought. A stock up 30% over 1 year may still be down from your cost if you bought near the peak.")
+                    }
+                    if let rsi = p.rsi14 {
+                        riskCell("RSI 14", value: String(format: "%.0f", rsi),
+                                 color: rsi > 70 ? .loss : rsi < 30 ? .gain : .textSecondary,
+                                 hint: rsi > 70 ? "Overbought" : rsi < 30 ? "Oversold" : "Neutral",
+                                 tooltip: "RSI (Relative Strength Index) measures recent price momentum on a 0-100 scale. Above 70 = stock has risen very quickly and may pull back (~55-60% of the time). Below 30 = stock has fallen very quickly and may bounce (~55-60% of the time). Between 40-60 = neutral momentum.")
+                    }
+                    if let sma200 = p.sma200 {
+                        riskCell("vs SMA200", value: String(format: "%+.1f%%", (p.price - sma200) / sma200 * 100),
+                                 color: p.price > sma200 ? .gain : .loss,
+                                 hint: p.price > sma200 ? "Above 200-day avg" : "Below 200-day avg",
+                                 tooltip: "The 200-day moving average is the most widely watched long-term trend indicator. Professional fund managers use it to determine if a stock is in a long-term uptrend (above) or downtrend (below). ~65% of stocks above their SMA200 continue higher over the next 3 months.")
                     }
                 }
             }
@@ -405,6 +453,10 @@ struct StockDetailView: View {
 
     // MARK: - Helpers
 
+    func riskCell(_ label: String, value: String, color: Color, hint: String, tooltip: String = "") -> some View {
+        RiskMetricCell(label: label, value: value, color: color, hint: hint, tooltip: tooltip)
+    }
+
     func statCell(_ label: String, value: String, color: Color) -> some View {
         VStack(spacing: 3) {
             Text(value)
@@ -463,6 +515,87 @@ struct StockDetailView: View {
 
     func money(_ value: Double) -> String {
         currencyFormatter.string(from: NSNumber(value: value)) ?? "$\(String(format: "%.2f", value))"
+    }
+}
+
+// MARK: - Risk Metric Cell
+
+struct RiskMetricCell: View {
+    let label: String
+    let value: String
+    let color: Color
+    let hint: String
+    let tooltip: String
+    @State private var showTooltip = false
+
+    var body: some View {
+        Button(action: { if !tooltip.isEmpty { showTooltip = true } }) {
+            VStack(spacing: 3) {
+                HStack(spacing: 2) {
+                    Text(value)
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(color)
+                    if !tooltip.isEmpty {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 8))
+                            .foregroundColor(.textTertiary)
+                    }
+                }
+                Text(label)
+                    .font(.caption2)
+                    .foregroundColor(.textTertiary)
+                Text(hint)
+                    .font(.system(size: 9))
+                    .foregroundColor(.textTertiary.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(Color.surface2)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showTooltip) {
+            RiskTooltipView(label: label, value: value, color: color, explanation: tooltip)
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+    }
+}
+
+struct RiskTooltipView: View {
+    let label: String
+    let value: String
+    let color: Color
+    let explanation: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(color)
+                    .frame(width: 4, height: 44)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(label)
+                        .font(.title3.bold())
+                    Text(value)
+                        .font(.title2.bold())
+                        .foregroundColor(color)
+                }
+            }
+            Divider()
+            Text(explanation)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("⚠️ Informational only. Not financial advice.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Spacer()
+        }
+        .padding(24)
     }
 }
 

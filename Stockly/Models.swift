@@ -54,7 +54,14 @@ struct PriceData: Sendable {
     let avgVolume20d: Int
     let sma20: Double?
     let sma50: Double?
+    let sma200: Double?
     let rsi14: Double?
+    // Risk & return metrics
+    let beta: Double?
+    let sharpeRatio: Double?
+    let annualizedVolatility: Double?
+    let maxDrawdown: Double?
+    let return1y: Double?
 }
 
 struct EarningsInfo: Sendable {

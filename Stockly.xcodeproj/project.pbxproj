@@ -29,6 +29,8 @@
 		BB000005BB000005BB000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000005BB000005BB000002 /* SettingsView.swift */; };
 		BB000006BB000006BB000001 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000006BB000006BB000002 /* Keychain.swift */; };
 		BB000007BB000007BB000001 /* AddPositionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000007BB000007BB000002 /* AddPositionView.swift */; };
+		BB000008BB000008BB000001 /* DisclaimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000008BB000008BB000002 /* DisclaimerView.swift */; };
+		BB000009BB000009BB000001 /* SignalExplainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000009BB000009BB000002 /* SignalExplainer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -74,6 +76,8 @@
 		BB000005BB000005BB000002 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		BB000006BB000006BB000002 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
 		BB000007BB000007BB000002 /* AddPositionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPositionView.swift; sourceTree = "<group>"; };
+		BB000008BB000008BB000002 /* DisclaimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisclaimerView.swift; sourceTree = "<group>"; };
+		BB000009BB000009BB000002 /* SignalExplainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalExplainer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -143,6 +147,8 @@
 				BB000005BB000005BB000002 /* SettingsView.swift */,
 				BB000006BB000006BB000002 /* Keychain.swift */,
 				BB000007BB000007BB000002 /* AddPositionView.swift */,
+				BB000008BB000008BB000002 /* DisclaimerView.swift */,
+				BB000009BB000009BB000002 /* SignalExplainer.swift */,
 			);
 			path = Stockly;
 			sourceTree = "<group>";
@@ -313,6 +319,8 @@
 				BB000005BB000005BB000001 /* SettingsView.swift in Sources */,
 				BB000006BB000006BB000001 /* Keychain.swift in Sources */,
 				BB000007BB000007BB000001 /* AddPositionView.swift in Sources */,
+				BB000008BB000008BB000001 /* DisclaimerView.swift in Sources */,
+				BB000009BB000009BB000001 /* SignalExplainer.swift in Sources */,
 				7B1D65802C7BA8B200B82A44 /* Item.swift in Sources */,
 				7B1D657C2C7BA8B200B82A44 /* StocklyApp.swift in Sources */,
 				5AB6C0EF2FA47B0500C44216 /* SettingsView.swift in Sources */,
