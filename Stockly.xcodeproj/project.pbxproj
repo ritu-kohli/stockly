@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5A27454F2FA83B570076E504 /* CollapsibleSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A27454E2FA83B570076E504 /* CollapsibleSection.swift */; };
+		5A2745512FA83BA70076E504 /* Color.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2745502FA83BA70076E504 /* Color.swift */; };
+		5A2745532FA83C5F0076E504 /* Helper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2745522FA83C5F0076E504 /* Helper.swift */; };
 		5AB6C0E22FA30AED00C44216 /* PortfolioViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AB6C0E12FA30AED00C44216 /* PortfolioViewModel.swift */; };
 		5AB6C0E42FA30B1A00C44216 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AB6C0E32FA30B1A00C44216 /* Models.swift */; };
 		5AB6C0EF2FA47B0500C44216 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AB6C0ED2FA47B0500C44216 /* SettingsView.swift */; };
@@ -51,6 +54,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		5A27454E2FA83B570076E504 /* CollapsibleSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollapsibleSection.swift; sourceTree = "<group>"; };
+		5A2745502FA83BA70076E504 /* Color.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Color.swift; sourceTree = "<group>"; };
+		5A2745522FA83C5F0076E504 /* Helper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Helper.swift; sourceTree = "<group>"; };
 		5AB6C0E12FA30AED00C44216 /* PortfolioViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioViewModel.swift; sourceTree = "<group>"; };
 		5AB6C0E32FA30B1A00C44216 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		5AB6C0EB2FA47B0500C44216 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
@@ -149,6 +155,9 @@
 				BB000007BB000007BB000002 /* AddPositionView.swift */,
 				BB000008BB000008BB000002 /* DisclaimerView.swift */,
 				BB000009BB000009BB000002 /* SignalExplainer.swift */,
+				5A27454E2FA83B570076E504 /* CollapsibleSection.swift */,
+				5A2745502FA83BA70076E504 /* Color.swift */,
+				5A2745522FA83C5F0076E504 /* Helper.swift */,
 			);
 			path = Stockly;
 			sourceTree = "<group>";
@@ -310,6 +319,7 @@
 			files = (
 				7B1D657E2C7BA8B200B82A44 /* ContentView.swift in Sources */,
 				5AB6C0E22FA30AED00C44216 /* PortfolioViewModel.swift in Sources */,
+				5A2745512FA83BA70076E504 /* Color.swift in Sources */,
 				5AB6C0E42FA30B1A00C44216 /* Models.swift in Sources */,
 				AA000001AA000001AA000001 /* AddHoldingView.swift in Sources */,
 				BB000001BB000001BB000001 /* SupabaseService.swift in Sources */,
@@ -318,6 +328,7 @@
 				BB000004BB000004BB000001 /* StockDetailView.swift in Sources */,
 				BB000005BB000005BB000001 /* SettingsView.swift in Sources */,
 				BB000006BB000006BB000001 /* Keychain.swift in Sources */,
+				5A2745532FA83C5F0076E504 /* Helper.swift in Sources */,
 				BB000007BB000007BB000001 /* AddPositionView.swift in Sources */,
 				BB000008BB000008BB000001 /* DisclaimerView.swift in Sources */,
 				BB000009BB000009BB000001 /* SignalExplainer.swift in Sources */,
@@ -326,6 +337,7 @@
 				5AB6C0EF2FA47B0500C44216 /* SettingsView.swift in Sources */,
 				5AB6C0F02FA47B0500C44216 /* Keychain.swift in Sources */,
 				5AB6C0F12FA47B0500C44216 /* NewsService.swift in Sources */,
+				5A27454F2FA83B570076E504 /* CollapsibleSection.swift in Sources */,
 				5AB6C0F22FA47B0500C44216 /* StockDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
