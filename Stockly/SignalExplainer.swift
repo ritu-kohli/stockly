@@ -2,7 +2,8 @@ import SwiftUI
 
 // MARK: - Signal Explanations
 
-struct SignalInfo {
+struct SignalInfo: Identifiable {
+    let id = UUID()
     let title: String
     let plain: String       // one sentence, no jargon
     let what: String        // what it measures
@@ -173,11 +174,15 @@ enum SignalExplainer {
 
 struct SignalPill: View {
     let reason: String
+    var onTap: ((SignalInfo) -> Void)? = nil
     @State private var showTooltip = false
 
     var body: some View {
         let info = SignalExplainer.info(for: reason)
-        Button(action: { showTooltip = true }) {
+        Button(action: {
+            if let onTap { onTap(info) }
+            else { showTooltip = true }
+        }) {
             Text(reason)
                 .font(.caption2.weight(.medium))
                 .foregroundColor(info.color)

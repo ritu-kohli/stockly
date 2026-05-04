@@ -58,7 +58,7 @@ struct HoldingRow: Codable, Sendable {
 }
 
 // Local model decoupled from @Model for Supabase use
-struct HoldingLocal: Sendable, Identifiable {
+struct HoldingLocal: Sendable, Identifiable , Hashable {
     let id: String
     let sym: String
     let name: String

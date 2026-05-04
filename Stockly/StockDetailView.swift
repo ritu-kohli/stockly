@@ -5,6 +5,8 @@ struct StockDetailView: View {
     @ObservedObject var vm: PortfolioViewModel
     @State private var analysis: StockAnalysis?
     @State private var isLoading = true
+    @State private var selectedSignal: SignalInfo?
+    @State private var selectedRiskTooltip: (label: String, value: String, color: Color, explanation: String)?
     @Environment(\.dismiss) private var dismiss
 
     private var priceData: PriceData? { vm.prices[holding.sym] }
@@ -34,6 +36,22 @@ struct StockDetailView: View {
         .task {
             analysis = await NewsService.shared.fetchAnalysis(for: holding.sym, companyName: holding.name)
             isLoading = false
+        }
+        // Tooltip overlay — owned by StockDetailView, no nested sheets
+        .sheet(item: $selectedSignal) { info in
+            SignalTooltipView(info: info)
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: Binding(
+            get: { selectedRiskTooltip != nil },
+            set: { if !$0 { selectedRiskTooltip = nil } }
+        )) {
+            if let t = selectedRiskTooltip {
+                RiskTooltipView(label: t.label, value: t.value, color: t.color, explanation: t.explanation)
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
+            }
         }
     }
 
@@ -135,7 +153,7 @@ struct StockDetailView: View {
                         .kerning(0.6)
                     FlowLayout(spacing: 6) {
                         ForEach(smartStatus.reasons, id: \.self) { reason in
-                            SignalPill(reason: reason)
+                            SignalPill(reason: reason, onTap: { info in selectedSignal = info })
                         }
                     }
                 }
@@ -454,7 +472,9 @@ struct StockDetailView: View {
     // MARK: - Helpers
 
     func riskCell(_ label: String, value: String, color: Color, hint: String, tooltip: String = "") -> some View {
-        RiskMetricCell(label: label, value: value, color: color, hint: hint, tooltip: tooltip)
+        RiskMetricCell(label: label, value: value, color: color, hint: hint, tooltip: tooltip) { t in
+            selectedRiskTooltip = (label: label, value: value, color: color, explanation: t)
+        }
     }
 
     func statCell(_ label: String, value: String, color: Color) -> some View {
@@ -526,10 +546,10 @@ struct RiskMetricCell: View {
     let color: Color
     let hint: String
     let tooltip: String
-    @State private var showTooltip = false
+    let onTap: (String) -> Void
 
     var body: some View {
-        Button(action: { if !tooltip.isEmpty { showTooltip = true } }) {
+        Button(action: { if !tooltip.isEmpty { onTap(tooltip) } }) {
             VStack(spacing: 3) {
                 HStack(spacing: 2) {
                     Text(value)
@@ -556,11 +576,6 @@ struct RiskMetricCell: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
-        .sheet(isPresented: $showTooltip) {
-            RiskTooltipView(label: label, value: value, color: color, explanation: tooltip)
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
-        }
     }
 }
 

@@ -17,24 +17,40 @@ extension Color {
     static let loss          = Color(red: 0.95, green: 0.32, blue: 0.32)
 }
 
+// MARK: - Sheet Destination
+
+enum SheetDestination: Identifiable, Hashable {
+    case addHolding
+    case settings
+    case detail(HoldingLocal)
+    case addPosition(HoldingLocal)
+    case disclaimer
+
+    var id: String {
+        switch self {
+        case .addHolding:        return "addHolding"
+        case .settings:          return "settings"
+        case .detail(let h):     return "detail_\(h.sym)"
+        case .addPosition(let h):return "addPosition_\(h.sym)"
+        case .disclaimer:        return "disclaimer"
+        }
+    }
+}
+
 // MARK: - Main View
 
 struct ContentView: View {
 
     // @Environment(\.modelContext) private var modelContext  // DISABLED — SwiftData
     @StateObject private var vm = PortfolioViewModel()
-    @State private var showAddHolding = false
+    @State private var route: SheetDestination?
     @State private var editMode = false
     @State private var selectedSyms = Set<String>()
     @State private var contextInjected = false
     @State private var showError = false
-    @State private var showSettings = false
-    @State private var selectedHolding: HoldingLocal?
-    @State private var addPositionHolding: HoldingLocal?
-    @State private var showDisclaimer = !UserDefaults.standard.bool(forKey: "disclaimer_shown")
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack(alignment: .bottom) {
                 Color.bg.ignoresSafeArea()
 
@@ -71,6 +87,9 @@ struct ContentView: View {
             .onAppear {
                 guard !contextInjected else { return }
                 contextInjected = true
+//                if !UserDefaults.standard.bool(forKey: "disclaimer_shown") {
+//                    activeSheet = .disclaimer
+//                }
                 // vm.updateContext(modelContext)  // DISABLED — SwiftData
                 vm.syncFromSupabase()
                 vm.refreshPrices()
@@ -91,20 +110,19 @@ struct ContentView: View {
                 Text(vm.errorMessage ?? "")
             }
         }
-        .sheet(isPresented: $showAddHolding) {
-            AddHoldingView(vm: vm)
-        }
-        .sheet(isPresented: $showSettings) {
-            SettingsView(vm: vm)
-        }
-        .sheet(item: $selectedHolding) { holding in
-            StockDetailView(holding: holding, vm: vm)
-        }
-        .sheet(item: $addPositionHolding) { holding in
-            AddPositionView(holding: holding, vm: vm)
-        }
-        .sheet(isPresented: $showDisclaimer) {
-            DisclaimerView()
+        .sheet(item: $route) { destination in
+            switch destination {
+            case .addHolding:
+                AddHoldingView(vm: vm)
+            case .settings:
+                SettingsView(vm: vm)
+            case .detail(let h):
+                StockDetailView(holding: h, vm: vm)
+            case .addPosition(let h):
+                AddPositionView(holding: h, vm: vm)
+            case .disclaimer:
+                DisclaimerView()
+            }
         }
     }
 
@@ -187,7 +205,7 @@ struct ContentView: View {
                 .accessibilityLabel("Refresh prices")
                 .accessibilityHint("Fetches the latest stock prices")
 
-                Button(action: { showSettings = true }) {
+                Button(action: { route = .settings }) {
                     Image(systemName: "gearshape")
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(.textSecondary)
@@ -197,7 +215,7 @@ struct ContentView: View {
                 }
                 .accessibilityLabel("Settings")
 
-                Button(action: { showAddHolding = true }) {
+                Button(action: { route = .addHolding }) {
                     Image(systemName: "plus")
                         .font(.subheadline.weight(.bold))
                         .foregroundColor(.white)
@@ -298,58 +316,128 @@ struct ContentView: View {
     }
 
     func sectionView(group: GroupType, items: [HoldingLocal]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(group.rawValue)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.textTertiary)
-                    .textCase(.uppercase)
-                    .kerning(0.8)
-                Spacer()
-                Text("\(items.count)")
-                    .font(.caption.weight(.medium))
-                    .foregroundColor(.textTertiary)
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(group.rawValue), \(items.count) holding\(items.count == 1 ? "" : "s")")
-
-            VStack(spacing: 2) {
-                ForEach(items, id: \.sym) { item in
-                    rowView(item)
-                        .contentShape(Rectangle())
-                        .contextMenu {
-                            Button(action: { addPositionHolding = item }) {
-                                Label("Add to Position", systemImage: "plus.circle")
-                            }
-                            Button(action: { selectedHolding = item }) {
-                                Label("View Analysis", systemImage: "chart.bar.xaxis")
-                            }
-                            Divider()
-                            Button(role: .destructive, action: {
-                                vm.removeHoldings(syms: [item.sym])
-                            }) {
-                                Label("Remove", systemImage: "trash")
-                            }
-                        }
-                        .simultaneousGesture(TapGesture().onEnded {
-                            if editMode {
-                                withAnimation(.spring(response: 0.2)) {
-                                    if selectedSyms.contains(item.sym) { selectedSyms.remove(item.sym) }
-                                    else { selectedSyms.insert(item.sym) }
-                                }
-                            } else {
-                                selectedHolding = item
-                            }
-                        })
-                }
-            }
-            .background(Color.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.border, lineWidth: 1))
-        }
+        CollapsibleSection(group: group, items: items, vm: vm,
+                           editMode: editMode, selectedSyms: $selectedSyms,
+                           activeSheet: $route)
     }
 
-    // MARK: - Row
+    static func makeRow(h: HoldingLocal, priceData: PriceData?, px: Double, dayChange: Double,
+                         pnl: Double, pnlPct: Double, isUp: Bool, status: SmartStatus,
+                         isSelected: Bool, editMode: Bool, isEarnings: Bool) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                if editMode {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.title3)
+                        .foregroundColor(isSelected ? .loss : .textTertiary)
+                        .animation(.spring(response: 0.2), value: isSelected)
+                        .accessibilityHidden(true)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(h.sym).font(.body.weight(.bold)).foregroundColor(.textPrimary)
+                        statusPillStatic(status)
+                        if isEarnings {
+                            Text("EARNINGS")
+                                .font(.system(size: 9, weight: .bold)).foregroundColor(.orange)
+                                .padding(.horizontal, 5).padding(.vertical, 2)
+                                .background(Color.orange.opacity(0.15)).clipShape(Capsule())
+                        }
+                    }
+                    Text(h.name).font(.caption).foregroundColor(.textSecondary).lineLimit(1)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(moneyStatic(px)).font(.body.weight(.bold)).foregroundColor(.textPrimary)
+                    if priceData != nil {
+                        HStack(spacing: 2) {
+                            Image(systemName: isUp ? "arrow.up.right" : "arrow.down.right")
+                                .font(.system(size: 9, weight: .bold))
+                            Text(String(format: "%.2f%%", abs(dayChange))).font(.caption.weight(.semibold))
+                        }
+                        .foregroundColor(isUp ? .gain : .loss)
+                    }
+                }
+            }
+            .padding(.horizontal, 16).padding(.vertical, 14)
+            .background(isSelected ? Color.loss.opacity(0.08) : Color.clear)
+            .animation(.easeInOut(duration: 0.15), value: isSelected)
+
+            if priceData != nil {
+                HStack(spacing: 0) {
+                    detailCellStatic(label: "P&L",      value: "\(pnl >= 0 ? "+" : "")\(moneyStatic(pnl))",   color: pnl >= 0 ? .gain : .loss)
+                    detailCellStatic(label: "Return",   value: String(format: "%+.1f%%", pnlPct),              color: pnlPct >= 0 ? .gain : .loss)
+                    detailCellStatic(label: "Shares",   value: String(format: "%.4g", h.shares),               color: .textSecondary)
+                    detailCellStatic(label: "Avg Cost", value: moneyStatic(h.cost),                            color: .textSecondary)
+                }
+                .padding(.horizontal, 16).padding(.bottom, 12)
+
+                if let extPx = priceData?.extendedPrice, let extChg = priceData?.extendedChangePercent {
+                    HStack(spacing: 6) {
+                        Image(systemName: "moon.stars").font(.caption2).foregroundColor(.textTertiary).accessibilityHidden(true)
+                        Text("After hours").font(.caption.weight(.medium)).foregroundColor(.textTertiary)
+                        Text(moneyStatic(extPx)).font(.caption.weight(.semibold)).foregroundColor(.textSecondary)
+                        Text(String(format: "%+.2f%%", extChg)).font(.caption.weight(.semibold))
+                            .foregroundColor(extChg >= 0 ? .gain : .loss)
+                    }
+                    .padding(.horizontal, 16).padding(.bottom, 12)
+                }
+
+                if !status.reasons.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(status.reasons, id: \.self) { SignalPill(reason: $0) }
+                        }
+                        .padding(.horizontal, 16)
+                    }
+                    .padding(.bottom, 12)
+                }
+            }
+
+            Rectangle().fill(Color.border).frame(height: 1).padding(.leading, 16).accessibilityHidden(true)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(h.name), \(h.sym), \(moneyStatic(px))")
+        .accessibilityHint("Double tap to view analysis")
+    }
+
+    static func statusPillStatic(_ status: SmartStatus) -> some View {
+        let colors: (Color, Color) = {
+            switch status.status {
+            case .strongBuy: return (Color.gain.opacity(0.2),    .gain)
+            case .buy:       return (Color.gain.opacity(0.15),   .gain)
+            case .hold:      return (Color.white.opacity(0.08),  .textSecondary)
+            case .watch:     return (Color.blue.opacity(0.15),   .blue)
+            case .trim:      return (Color.orange.opacity(0.15), .orange)
+            case .review:    return (Color.loss.opacity(0.15),   .loss)
+            }
+        }()
+        return Text(status.label)
+            .font(.system(size: 9, weight: .bold))
+            .foregroundColor(colors.1)
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(colors.0).clipShape(Capsule())
+            .accessibilityHidden(true)
+    }
+
+    static func detailCellStatic(label: String, value: String, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(value).font(.caption.weight(.semibold)).foregroundColor(color)
+            Text(label).font(.caption2.weight(.medium)).foregroundColor(.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    static func moneyStatic(_ value: Double) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .currency
+        f.locale = .current
+        f.maximumFractionDigits = 2
+        f.minimumFractionDigits = 2
+        return f.string(from: NSNumber(value: value)) ?? "$\(String(format: "%.2f", value))"
+    }
+
+    // MARK: - Row (delegates to static helper)
 
     func rowView(_ h: HoldingLocal) -> some View {
         let priceData  = vm.prices[h.sym]
@@ -363,132 +451,12 @@ struct ContentView: View {
         let pnlSign    = pnl >= 0 ? "gain" : "loss"
         let daySign    = isUp ? "up" : "down"
 
-        return VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                if editMode {
-                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .font(.title3)
-                        .foregroundColor(isSelected ? .loss : .textTertiary)
-                        .animation(.spring(response: 0.2), value: isSelected)
-                        .accessibilityHidden(true)
-                }
-
-                // Ticker avatar
-//                ZStack {
-//                    RoundedRectangle(cornerRadius: 10)
-//                        .fill(Color.surface2)
-//                        .frame(width: 42, height: 42)
-//                    Text(h.sym)
-//                        .font(.system(size: h.sym.count > 3 ? 9 : 11, weight: .bold, design: .rounded))
-//                        .foregroundColor(.white) // white on surface2 guarantees contrast
-//                        .minimumScaleFactor(0.5)
-//                        .lineLimit(1)
-//                        .padding(4)
-//                }
-//                .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        Text(h.sym)
-                            .font(.body.weight(.bold))
-                            .foregroundColor(.textPrimary)
-                        statusPill(status)
-                        if vm.isEarningsThisWeek(h.sym) {
-                            Text("EARNINGS")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(.orange)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(Color.orange.opacity(0.15))
-                                .clipShape(Capsule())
-                        }
-                    }
-                    Text(h.name)
-                        .font(.caption)
-                        .foregroundColor(.textSecondary)
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 3) {
-                    Text(money(px))
-                        .font(.body.weight(.bold))
-                        .foregroundColor(.textPrimary)
-
-                    if priceData != nil {
-                        HStack(spacing: 2) {
-                            Image(systemName: isUp ? "arrow.up.right" : "arrow.down.right")
-                                .font(.system(size: 9, weight: .bold))
-                            Text(String(format: "%.2f%%", abs(dayChange)))
-                                .font(.caption.weight(.semibold))
-                        }
-                        .foregroundColor(isUp ? .gain : .loss)
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(isSelected ? Color.loss.opacity(0.08) : Color.clear)
-            .animation(.easeInOut(duration: 0.15), value: isSelected)
-
-            if priceData != nil {
-                HStack(spacing: 0) {
-                    detailCell(label: "P&L",      value: "\(pnl >= 0 ? "+" : "")\(money(pnl))",          color: pnl >= 0 ? .gain : .loss)
-                    detailCell(label: "Return",   value: String(format: "%+.1f%%", pnlPct),               color: pnlPct >= 0 ? .gain : .loss)
-                    detailCell(label: "Shares",   value: String(format: "%.4g", h.shares),                color: .textSecondary)
-                    detailCell(label: "Avg Cost", value: money(h.cost),                                   color: .textSecondary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
-
-                if let extPx = priceData?.extendedPrice, let extChg = priceData?.extendedChangePercent {
-                    HStack(spacing: 6) {
-                        Image(systemName: "moon.stars")
-                            .font(.caption2)
-                            .foregroundColor(.textTertiary)
-                            .accessibilityHidden(true)
-                        Text("After hours")
-                            .font(.caption.weight(.medium))
-                            .foregroundColor(.textTertiary)
-                        Text(money(extPx))
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(.textSecondary)
-                        Text(String(format: "%+.2f%%", extChg))
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(extChg >= 0 ? .gain : .loss)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("After hours price \(money(extPx)), \(extChg >= 0 ? "up" : "down") \(String(format: "%.2f", abs(extChg))) percent")
-                }
-
-//                if !status.reasons.isEmpty {
-//                    ScrollView(.horizontal, showsIndicators: false) {
-//                        HStack(spacing: 6) {
-//                            ForEach(status.reasons, id: \.self) { reason in
-////                                SignalPill(reason: reason)
-//                            }
-//                        }
-//                        .padding(.horizontal, 16)
-//                    }
-//                    .padding(.bottom, 12)
-//                    .accessibilityLabel("Signals: \(status.reasons.joined(separator: ", "))")
-//                }
-            }
-
-            Rectangle()
-                .fill(Color.border)
-                .frame(height: 1)
-                .padding(.leading, 70)
-                .accessibilityHidden(true)
-        }
-        // Single VoiceOver element per row with full context
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(rowAccessibilityLabel(h, px: px, dayChange: dayChange, pnl: pnl, pnlPct: pnlPct, status: status, daySign: daySign, pnlSign: pnlSign, priceData: priceData))
-        .accessibilityHint(editMode ? "Double tap to \(isSelected ? "deselect" : "select") for deletion" : "")
-        .accessibilityAddTraits(editMode && isSelected ? .isSelected : [])
+        return ContentView.makeRow(
+            h: h, priceData: priceData, px: px, dayChange: dayChange,
+            pnl: pnl, pnlPct: pnlPct, isUp: isUp, status: status,
+            isSelected: isSelected, editMode: editMode,
+            isEarnings: vm.isEarningsThisWeek(h.sym)
+        )
     }
 
     private func rowAccessibilityLabel(_ h: HoldingLocal, px: Double, dayChange: Double, pnl: Double, pnlPct: Double, status: SmartStatus, daySign: String, pnlSign: String, priceData: PriceData?) -> String {
@@ -562,7 +530,7 @@ struct ContentView: View {
                     .foregroundColor(.textSecondary)
                     .multilineTextAlignment(.center)
             }
-            Button(action: { showAddHolding = true }) {
+            Button(action: { route = .addHolding }) {
                 HStack(spacing: 8) {
                     Image(systemName: "plus").font(.subheadline.weight(.bold))
                     Text("Add Holding").font(.body.weight(.semibold))
@@ -593,6 +561,123 @@ struct ContentView: View {
 
     func money(_ value: Double) -> String {
         currencyFormatter.string(from: NSNumber(value: value)) ?? "$\(String(format: "%.2f", value))"
+    }
+}
+
+// MARK: - Collapsible Section
+
+struct CollapsibleSection: View {
+    let group: GroupType
+    let items: [HoldingLocal]
+    @ObservedObject var vm: PortfolioViewModel
+    let editMode: Bool
+    @Binding var selectedSyms: Set<String>
+    @Binding var activeSheet: SheetDestination?
+
+    @State private var isExpanded = true
+
+    var sectionPnl: Double {
+        items.reduce(0) { total, h in
+            let px = vm.prices[h.sym]?.price ?? h.cost
+            return total + (px - h.cost) * h.shares
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Tappable header
+            Button(action: {
+                isExpanded.toggle()
+//                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+//                   
+//                }
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.textTertiary)
+                        .frame(width: 12)
+
+                    Text(group.rawValue)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.textTertiary)
+                        .textCase(.uppercase)
+                        .kerning(0.8)
+
+                    Spacer()
+
+                    // Section P&L summary
+                    if !isExpanded {
+                        Text(sectionPnl >= 0 ? "+" : "")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(sectionPnl >= 0 ? .gain : .loss)
+                        + Text(String(format: "%.0f", sectionPnl))
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(sectionPnl >= 0 ? .gain : .loss)
+                    }
+
+                    Text("\(items.count)")
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(.textTertiary)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(group.rawValue), \(items.count) holding\(items.count == 1 ? "" : "s"), \(isExpanded ? "expanded" : "collapsed")")
+            .accessibilityHint("Double tap to \(isExpanded ? "collapse" : "expand")")
+
+            if isExpanded {
+                VStack(spacing: 2) {
+                    ForEach(items, id: \.sym) { item in
+                        rowView(item)
+                    }
+                }
+                .background(Color.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.border, lineWidth: 1))
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+
+    func rowView(_ item: HoldingLocal) -> some View {
+        let priceData  = vm.prices[item.sym]
+        let px         = priceData?.price ?? item.cost
+        let dayChange  = priceData?.dayChangePercent ?? 0
+        let pnl        = (px - item.cost) * item.shares
+        let pnlPct     = ((px - item.cost) / item.cost) * 100
+        let isUp       = dayChange >= 0
+        let status     = vm.smartStatus(for: item)
+        let isSelected = selectedSyms.contains(item.sym)
+
+        return ContentView.makeRow(
+            h: item, priceData: priceData, px: px, dayChange: dayChange,
+            pnl: pnl, pnlPct: pnlPct, isUp: isUp, status: status,
+            isSelected: isSelected, editMode: editMode,
+            isEarnings: vm.isEarningsThisWeek(item.sym)
+        )
+        .contentShape(Rectangle())
+        .contextMenu {
+            Button(action: { activeSheet = .addPosition(item) }) {
+                Label("Add to Position", systemImage: "plus.circle")
+            }
+            Button(action: { activeSheet = .detail(item) }) {
+                Label("View Analysis", systemImage: "chart.bar.xaxis")
+            }
+            Divider()
+            Button(role: .destructive, action: { vm.removeHoldings(syms: [item.sym]) }) {
+                Label("Remove", systemImage: "trash")
+            }
+        }
+        .simultaneousGesture(TapGesture().onEnded {
+            if editMode {
+                withAnimation(.spring(response: 0.2)) {
+                    if selectedSyms.contains(item.sym) { selectedSyms.remove(item.sym) }
+                    else { selectedSyms.insert(item.sym) }
+                }
+            } else {
+                activeSheet = .detail(item)
+            }
+        })
     }
 }
 
