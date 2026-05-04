@@ -1,5 +1,5 @@
 import SwiftUI
-import SwiftData
+// import SwiftData  // DISABLED — Supabase is source of truth
 
 @main
 struct StocklyApp: App {
@@ -7,6 +7,6 @@ struct StocklyApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: Holding.self, isUndoEnabled: false)
+        // .modelContainer(for: Holding.self, isUndoEnabled: false)  // DISABLED — SwiftData
     }
 }

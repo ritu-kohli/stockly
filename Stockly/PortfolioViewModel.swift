@@ -1,12 +1,12 @@
 import Foundation
 import SwiftUI
-import SwiftData
+// import SwiftData  // DISABLED — Supabase is source of truth
 import Network
 
 @MainActor
 class PortfolioViewModel: ObservableObject {
 
-    @Published var holdings: [Holding] = []
+    @Published var holdings: [HoldingLocal] = []
     @Published var prices: [String: PriceData] = [:]
     @Published var isLoading = false
     @Published var isSyncing = false
@@ -15,24 +15,15 @@ class PortfolioViewModel: ObservableObject {
     @Published var earningsDates: [String: EarningsInfo] = [:]
     @Published var errorMessage: String?
 
-    private var modelContext: ModelContext
+    // private var modelContext: ModelContext  // DISABLED — SwiftData
     private var historicalCache: [String: (data: PriceData, fetchedAt: Date)] = [:]
     private var refreshTimer: Timer?
     private var networkMonitor: NWPathMonitor?
     private static let historicalCacheTTL: TimeInterval = 3600
     private static let refreshInterval: TimeInterval = 300
 
-    init(modelContext: ModelContext) {
-        self.modelContext = modelContext
-        loadHoldings()
+    init() {
         startNetworkMonitor()
-    }
-
-    convenience init() {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = (try? ModelContainer(for: Holding.self, configurations: config))
-            ?? (try! ModelContainer(for: Holding.self))
-        self.init(modelContext: container.mainContext)
     }
 
     // MARK: - Network Monitor
@@ -43,7 +34,6 @@ class PortfolioViewModel: ObservableObject {
             DispatchQueue.main.async {
                 let wasOffline = self?.isOffline ?? false
                 self?.isOffline = path.status != .satisfied
-                // Auto-sync when coming back online
                 if wasOffline && path.status == .satisfied {
                     self?.syncFromSupabase()
                     self?.refreshPrices()
@@ -53,13 +43,8 @@ class PortfolioViewModel: ObservableObject {
         networkMonitor?.start(queue: DispatchQueue(label: "NetworkMonitor"))
     }
 
-    // MARK: - Context
-
-    func updateContext(_ context: ModelContext) {
-        guard modelContext !== context else { return }
-        self.modelContext = context
-        loadHoldings()
-    }
+    // MARK: - Context (SwiftData disabled)
+    // func updateContext(_ context: ModelContext) { ... }
 
     func startAutoRefresh() {
         stopAutoRefresh()
@@ -87,19 +72,7 @@ class PortfolioViewModel: ObservableObject {
         return totalMinutes >= 570 && totalMinutes <= 1020
     }
 
-    // MARK: - Holdings
-
-    func loadHoldings() {
-        do {
-            holdings = try modelContext.fetch(FetchDescriptor<Holding>())
-        } catch {
-            errorMessage = "Failed to load holdings: \(error.localizedDescription)"
-        }
-    }
-
-    // MARK: - Supabase Sync
-    // Uses sym as the deduplication key — Supabase has a UNIQUE constraint on sym
-    // so concurrent adds of the same ticker are safe
+    // MARK: - Supabase Sync (sole source of truth)
 
     func syncFromSupabase() {
         guard !isSyncing else { return }
@@ -109,21 +82,11 @@ class PortfolioViewModel: ObservableObject {
             defer { isSyncing = false }
             do {
                 let remote = try await SupabaseService.shared.fetchHoldings()
-                // Use sym as dedup key — safe against race conditions
-                let localSyms = Set(holdings.map { $0.sym })
-                var added = false
-                for h in remote where !localSyms.contains(h.sym) {
-                    modelContext.insert(Holding(sym: h.sym, name: h.name,
-                                                shares: h.shares, cost: h.cost, group: h.group))
-                    added = true
-                }
-                if added {
-                    save()
-                    loadHoldings()
+                holdings = remote
+                if !holdings.isEmpty {
                     await fetchPrices(for: holdings.map { $0.sym })
                 }
             } catch {
-                // Offline or Supabase down — show banner, not error alert
                 if isOffline {
                     lastUpdated = "Offline — data will sync when connected"
                 } else {
@@ -133,32 +96,34 @@ class PortfolioViewModel: ObservableObject {
         }
     }
 
-    func addHolding(_ holding: Holding) {
-        // Check both local AND pending sync to prevent race condition duplicates
+    func addHolding(_ holding: HoldingLocal) {
         guard !holdings.contains(where: { $0.sym == holding.sym }) else {
             errorMessage = "\(holding.sym) is already in your portfolio"
             return
         }
-        modelContext.insert(holding)
-        save()
-        loadHoldings()
+        holdings.append(holding)
         Task {
             if await SupabaseService.shared.isConfigured {
-                let local = HoldingLocal(sym: holding.sym, name: holding.name,
-                                         shares: holding.shares, cost: holding.cost, group: holding.group)
-                try? await SupabaseService.shared.insert(local)
+                do {
+                    try await SupabaseService.shared.insert(holding)
+                } catch {
+                    // Rollback local if Supabase fails
+                    holdings.removeAll { $0.sym == holding.sym }
+                    errorMessage = "Failed to add \(holding.sym): \(error.localizedDescription)"
+                    return
+                }
             }
             await fetchPrices(for: [holding.sym])
         }
     }
 
-    func updateHolding(_ holding: Holding, additionalShares: Double, pricePerShare: Double) {
+    func updateHolding(_ holding: HoldingLocal, additionalShares: Double, pricePerShare: Double) {
         let totalShares = holding.shares + additionalShares
         let newAvgCost = ((holding.shares * holding.cost) + (additionalShares * pricePerShare)) / totalShares
-        holding.shares = totalShares
-        holding.cost = newAvgCost
-        save()
-        loadHoldings()
+        if let idx = holdings.firstIndex(where: { $0.sym == holding.sym }) {
+            holdings[idx] = HoldingLocal(id: holding.id, sym: holding.sym, name: holding.name,
+                                          shares: totalShares, cost: newAvgCost, group: holding.group)
+        }
         Task {
             if await SupabaseService.shared.isConfigured {
                 try? await SupabaseService.shared.upsertHolding(sym: holding.sym,
@@ -167,24 +132,12 @@ class PortfolioViewModel: ObservableObject {
         }
     }
 
-    func removeHoldings(ids: Set<PersistentIdentifier>) {
-        let toDelete = ids.compactMap { modelContext.model(for: $0) as? Holding }
-        let syms = toDelete.map { $0.sym }
-        toDelete.forEach { modelContext.delete($0) }
-        save()
-        loadHoldings()
+    func removeHoldings(syms: Set<String>) {
+        holdings.removeAll { syms.contains($0.sym) }
         Task {
             if await SupabaseService.shared.isConfigured {
-                try? await SupabaseService.shared.delete(syms: syms)
+                try? await SupabaseService.shared.delete(syms: Array(syms))
             }
-        }
-    }
-
-    private func save() {
-        do {
-            try modelContext.save()
-        } catch {
-            errorMessage = "Failed to save: \(error.localizedDescription)"
         }
     }
 
@@ -206,12 +159,8 @@ class PortfolioViewModel: ObservableObject {
     }
 
     // MARK: - Smart Status
-    // Technical indicator scoring — NOT investment advice.
-    // Signals: P&L vs cost basis, RSI, SMA trend, 52w position, volume, day momentum.
-    // Beta and Sharpe are displayed as informational metrics only (not scored)
-    // because high-beta growth stocks would be incorrectly penalized.
 
-    func smartStatus(for holding: Holding) -> SmartStatus {
+    func smartStatus(for holding: HoldingLocal) -> SmartStatus {
         guard let p = prices[holding.sym] else {
             return SmartStatus(status: .hold, label: "Neutral")
         }
@@ -219,7 +168,6 @@ class PortfolioViewModel: ObservableObject {
         var score: Double = 0
         var reasons: [String] = []
 
-        // 1. Cost basis P&L (-3 to +3)
         let plPct = ((p.price - holding.cost) / holding.cost) * 100
         switch plPct {
         case ..<(-20): score -= 3; reasons.append("down >20%")
@@ -231,7 +179,6 @@ class PortfolioViewModel: ObservableObject {
         default: break
         }
 
-        // 2. RSI (-2 to +2)
         if let rsi = p.rsi14 {
             switch rsi {
             case ..<30: score += 2; reasons.append("RSI oversold")
@@ -242,7 +189,6 @@ class PortfolioViewModel: ObservableObject {
             }
         }
 
-        // 3. Price vs SMA20 & SMA50 (-2 to +2)
         if let sma20 = p.sma20 {
             if p.price > sma20 * 1.02      { score += 1; reasons.append("above SMA20") }
             else if p.price < sma20 * 0.98 { score -= 1; reasons.append("below SMA20") }
@@ -256,7 +202,6 @@ class PortfolioViewModel: ObservableObject {
             else if p.price < sma200 * 0.98 { score -= 1; reasons.append("below SMA200") }
         }
 
-        // 4. 52-week position (-1 to +1)
         let week52Range = p.fiftyTwoWeekHigh - p.fiftyTwoWeekLow
         if week52Range > 0 {
             let position = (p.price - p.fiftyTwoWeekLow) / week52Range
@@ -264,21 +209,18 @@ class PortfolioViewModel: ObservableObject {
             else if position <= 0.20 { score += 1; reasons.append("near 52w low") }
         }
 
-        // 5. Volume surge (-1 to +1)
         if p.avgVolume20d > 0 {
             let volRatio = Double(p.volume) / Double(p.avgVolume20d)
             if volRatio >= 2.0 && p.dayChangePercent > 0 { score += 1; reasons.append("volume surge up") }
             if volRatio >= 2.0 && p.dayChangePercent < 0 { score -= 1; reasons.append("volume surge down") }
         }
 
-        // 6. Day momentum (-1 to +1)
         switch p.dayChangePercent {
         case ..<(-3): score -= 1; reasons.append("big day drop")
         case 3...:    score += 1; reasons.append("big day gain")
         default: break
         }
 
-        // Map to status — labels describe the technical picture clearly
         let status: SmartStatusType
         let label: String
         switch score {
@@ -310,17 +252,13 @@ class PortfolioViewModel: ObservableObject {
 
     private func fetchPrices(for symbols: [String]) async {
         isLoading = true
-
-        // Fetch SPY once for all beta calculations
         let spyCloses = await YahooFinanceService.shared.fetchSPYCloses()
-
         let result = await YahooFinanceService.shared.fetchPrices(
             for: symbols,
             cachedHistorical: historicalCache,
             cacheTTL: Self.historicalCacheTTL,
             spyCloses: spyCloses
         )
-
         switch result {
         case .success(let (newPrices, updatedCache)):
             for (sym, data) in newPrices { prices[sym] = data }
@@ -332,7 +270,6 @@ class PortfolioViewModel: ObservableObject {
             }
             lastUpdated = isOffline ? "Offline" : "Using cached prices"
         }
-
         isLoading = false
     }
 
@@ -360,7 +297,6 @@ actor YahooFinanceService {
 
     typealias HistoricalCache = [String: (data: PriceData, fetchedAt: Date)]
 
-    // Fetch SPY once — shared across all beta calculations
     func fetchSPYCloses() async -> [Double] {
         guard let spy = try? await fetch(url: "\(baseURL)/SPY?interval=1d&range=1y"),
               let chart = spy["chart"] as? [String: Any],
@@ -441,12 +377,12 @@ actor YahooFinanceService {
             let isExtended   = lastExtended.map { abs($0 - regularPrice) > 0.01 } ?? false
 
             let isCacheValid = cachedEntry.map { Date().timeIntervalSince($0.fetchedAt) < cacheTTL } ?? false
-            var sma20: Double? = isCacheValid ? cachedEntry?.data.sma20 : nil
-            var sma50: Double? = isCacheValid ? cachedEntry?.data.sma50 : nil
+            var sma20: Double?  = isCacheValid ? cachedEntry?.data.sma20 : nil
+            var sma50: Double?  = isCacheValid ? cachedEntry?.data.sma50 : nil
             var sma200: Double? = isCacheValid ? cachedEntry?.data.sma200 : nil
-            var rsi14: Double? = isCacheValid ? cachedEntry?.data.rsi14 : nil
-            var avgVol: Int    = isCacheValid ? (cachedEntry?.data.avgVolume20d ?? 0) : 0
-            var beta: Double?  = isCacheValid ? cachedEntry?.data.beta : nil
+            var rsi14: Double?  = isCacheValid ? cachedEntry?.data.rsi14 : nil
+            var avgVol: Int     = isCacheValid ? (cachedEntry?.data.avgVolume20d ?? 0) : 0
+            var beta: Double?   = isCacheValid ? cachedEntry?.data.beta : nil
             var sharpe: Double? = isCacheValid ? cachedEntry?.data.sharpeRatio : nil
             var annVol: Double? = isCacheValid ? cachedEntry?.data.annualizedVolatility : nil
             var maxDD: Double?  = isCacheValid ? cachedEntry?.data.maxDrawdown : nil
@@ -476,7 +412,6 @@ actor YahooFinanceService {
                     maxDD  = metrics.maxDrawdown
                     ret1y  = metrics.return1y
 
-                    // Use pre-fetched SPY closes — align by count from end (same trading days)
                     if !spyCloses.isEmpty {
                         beta = Self.computeBeta(stock: closes, market: spyCloses)
                     }
@@ -526,7 +461,7 @@ actor YahooFinanceService {
         }
         guard http.statusCode == 200 else {
             throw NSError(domain: "YahooFinance", code: http.statusCode, userInfo: [
-                NSLocalizedDescriptionKey: "HTTP \(http.statusCode)\(http.statusCode == 429 ? " — rate limited, try again later" : "")"
+                NSLocalizedDescriptionKey: "HTTP \(http.statusCode)\(http.statusCode == 429 ? " — rate limited" : "")"
             ])
         }
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -535,10 +470,9 @@ actor YahooFinanceService {
         return json
     }
 
-    // Beta vs SPY — aligns by count from end (most recent N trading days)
     private static func computeBeta(stock: [Double], market: [Double]) -> Double? {
         let n = min(stock.count, market.count)
-        guard n > 30 else { return nil } // need enough data points
+        guard n > 30 else { return nil }
         let s = Array(stock.suffix(n))
         let m = Array(market.suffix(n))
         let sr = (1..<n).map { s[$0]/s[$0-1] - 1 }
@@ -547,11 +481,10 @@ actor YahooFinanceService {
         let meanM = mr.reduce(0,+) / Double(mr.count)
         let cov  = zip(sr, mr).map { ($0 - meanS) * ($1 - meanM) }.reduce(0,+) / Double(sr.count)
         let varM = mr.map { ($0 - meanM) * ($0 - meanM) }.reduce(0,+) / Double(mr.count)
-        guard varM > 1e-10 else { return nil } // guard against near-zero variance
+        guard varM > 1e-10 else { return nil }
         return cov / varM
     }
 
-    // Risk metrics — all division-by-zero protected
     private static func computeRiskMetrics(closes: [Double]) -> (volatility: Double?, sharpe: Double?, maxDrawdown: Double?, return1y: Double?) {
         guard closes.count > 2 else { return (nil, nil, nil, nil) }
         let returns = (1..<closes.count).map { closes[$0]/closes[$0-1] - 1 }
@@ -568,11 +501,9 @@ actor YahooFinanceService {
             let dd = (peak - c) / peak
             if dd > maxDD { maxDD = dd }
         }
-        let ret1y = (closes.last! / closes.first! - 1) * 100
-        return (annVol, sharpe, maxDD * 100, ret1y)
+        return (annVol, sharpe, maxDD * 100, (closes.last! / closes.first! - 1) * 100)
     }
 
-    // Wilder's smoothed RSI
     private static func computeWildersRSI(closes: [Double], period: Int) -> Double? {
         guard closes.count > period + 1 else { return nil }
         let changes = zip(closes.dropFirst(), closes).map { $0 - $1 }

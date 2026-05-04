@@ -1,6 +1,6 @@
 import SwiftUI
 import Foundation
-import SwiftData
+// import SwiftData  // DISABLED — Supabase is source of truth
 
 // MARK: - Design Tokens
 
@@ -21,16 +21,16 @@ extension Color {
 
 struct ContentView: View {
 
-    @Environment(\.modelContext) private var modelContext
+    // @Environment(\.modelContext) private var modelContext  // DISABLED — SwiftData
     @StateObject private var vm = PortfolioViewModel()
     @State private var showAddHolding = false
     @State private var editMode = false
-    @State private var selectedIDs = Set<PersistentIdentifier>()
+    @State private var selectedSyms = Set<String>()
     @State private var contextInjected = false
     @State private var showError = false
     @State private var showSettings = false
-    @State private var selectedHolding: Holding?
-    @State private var addPositionHolding: Holding?
+    @State private var selectedHolding: HoldingLocal?
+    @State private var addPositionHolding: HoldingLocal?
     @State private var showDisclaimer = !UserDefaults.standard.bool(forKey: "disclaimer_shown")
 
     var body: some View {
@@ -71,7 +71,7 @@ struct ContentView: View {
             .onAppear {
                 guard !contextInjected else { return }
                 contextInjected = true
-                vm.updateContext(modelContext)
+                // vm.updateContext(modelContext)  // DISABLED — SwiftData
                 vm.syncFromSupabase()
                 vm.refreshPrices()
                 vm.startAutoRefresh()
@@ -133,18 +133,18 @@ struct ContentView: View {
 
             HStack(spacing: 10) {
                 if !vm.holdings.isEmpty {
-                    if editMode && !selectedIDs.isEmpty {
+                    if editMode && !selectedSyms.isEmpty {
                         Button(action: {
                             withAnimation(.spring(response: 0.3)) {
-                                vm.removeHoldings(ids: selectedIDs)
-                                selectedIDs.removeAll()
+                                vm.removeHoldings(syms: selectedSyms)
+                                selectedSyms.removeAll()
                                 editMode = false
                             }
                         }) {
                             HStack(spacing: 4) {
                                 Image(systemName: "trash")
                                     .font(.caption.weight(.semibold))
-                                Text("Delete (\(selectedIDs.count))")
+                                Text("Delete (\(selectedSyms.count))")
                                     .font(.caption.weight(.semibold))
                             }
                             .foregroundColor(.white)
@@ -153,14 +153,14 @@ struct ContentView: View {
                             .background(Color.loss)
                             .clipShape(Capsule())
                         }
-                        .accessibilityLabel("Delete \(selectedIDs.count) selected holdings")
+                        .accessibilityLabel("Delete \(selectedSyms.count) selected holdings")
                         .transition(.scale.combined(with: .opacity))
                     }
 
                     Button(action: {
                         withAnimation(.spring(response: 0.3)) {
                             editMode.toggle()
-                            if !editMode { selectedIDs.removeAll() }
+//                            if !editMode { selectedIDs.removeAll() }
                         }
                     }) {
                         Image(systemName: editMode ? "checkmark" : "trash")
@@ -297,7 +297,7 @@ struct ContentView: View {
         }
     }
 
-    func sectionView(group: GroupType, items: [Holding]) -> some View {
+    func sectionView(group: GroupType, items: [HoldingLocal]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(group.rawValue)
@@ -314,7 +314,7 @@ struct ContentView: View {
             .accessibilityLabel("\(group.rawValue), \(items.count) holding\(items.count == 1 ? "" : "s")")
 
             VStack(spacing: 2) {
-                ForEach(items) { item in
+                ForEach(items, id: \.sym) { item in
                     rowView(item)
                         .contentShape(Rectangle())
                         .contextMenu {
@@ -326,7 +326,7 @@ struct ContentView: View {
                             }
                             Divider()
                             Button(role: .destructive, action: {
-                                vm.removeHoldings(ids: [item.id])
+                                vm.removeHoldings(syms: [item.sym])
                             }) {
                                 Label("Remove", systemImage: "trash")
                             }
@@ -334,8 +334,8 @@ struct ContentView: View {
                         .simultaneousGesture(TapGesture().onEnded {
                             if editMode {
                                 withAnimation(.spring(response: 0.2)) {
-                                    if selectedIDs.contains(item.id) { selectedIDs.remove(item.id) }
-                                    else { selectedIDs.insert(item.id) }
+                                    if selectedSyms.contains(item.sym) { selectedSyms.remove(item.sym) }
+                                    else { selectedSyms.insert(item.sym) }
                                 }
                             } else {
                                 selectedHolding = item
@@ -351,7 +351,7 @@ struct ContentView: View {
 
     // MARK: - Row
 
-    func rowView(_ h: Holding) -> some View {
+    func rowView(_ h: HoldingLocal) -> some View {
         let priceData  = vm.prices[h.sym]
         let px         = priceData?.price ?? h.cost
         let dayChange  = priceData?.dayChangePercent ?? 0
@@ -359,7 +359,7 @@ struct ContentView: View {
         let pnlPct     = ((px - h.cost) / h.cost) * 100
         let isUp       = dayChange >= 0
         let status     = vm.smartStatus(for: h)
-        let isSelected = selectedIDs.contains(h.id)
+        let isSelected = selectedSyms.contains(h.sym)
         let pnlSign    = pnl >= 0 ? "gain" : "loss"
         let daySign    = isUp ? "up" : "down"
 
@@ -491,7 +491,7 @@ struct ContentView: View {
         .accessibilityAddTraits(editMode && isSelected ? .isSelected : [])
     }
 
-    private func rowAccessibilityLabel(_ h: Holding, px: Double, dayChange: Double, pnl: Double, pnlPct: Double, status: SmartStatus, daySign: String, pnlSign: String, priceData: PriceData?) -> String {
+    private func rowAccessibilityLabel(_ h: HoldingLocal, px: Double, dayChange: Double, pnl: Double, pnlPct: Double, status: SmartStatus, daySign: String, pnlSign: String, priceData: PriceData?) -> String {
         var label = "\(h.name), \(h.sym). Current price \(money(px))."
         if priceData != nil {
             label += " \(daySign) \(String(format: "%.2f", abs(dayChange))) percent today."

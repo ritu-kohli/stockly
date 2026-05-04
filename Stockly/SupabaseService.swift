@@ -58,7 +58,7 @@ struct HoldingRow: Codable, Sendable {
 }
 
 // Local model decoupled from @Model for Supabase use
-struct HoldingLocal: Sendable {
+struct HoldingLocal: Sendable, Identifiable {
     let id: String
     let sym: String
     let name: String
@@ -68,6 +68,15 @@ struct HoldingLocal: Sendable {
 
     init(sym: String, name: String, shares: Double, cost: Double, group: GroupType) {
         self.id = UUID().uuidString
+        self.sym = sym.uppercased()
+        self.name = name
+        self.shares = shares
+        self.cost = cost
+        self.group = group
+    }
+
+    init(id: String, sym: String, name: String, shares: Double, cost: Double, group: GroupType) {
+        self.id = id
         self.sym = sym.uppercased()
         self.name = name
         self.shares = shares

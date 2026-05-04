@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AddPositionView: View {
-    let holding: Holding
+    let holding: HoldingLocal
     @ObservedObject var vm: PortfolioViewModel
     @Environment(\.dismiss) private var dismiss
 

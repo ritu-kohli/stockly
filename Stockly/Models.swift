@@ -1,24 +1,10 @@
 import Foundation
-import SwiftData
+// import SwiftData  // DISABLED — Supabase is source of truth
 
-// MARK: - Holding Model
-
-@Model
-class Holding {
-    var sym: String
-    var name: String
-    var shares: Double
-    var cost: Double
-    var group: GroupType
-
-    init(sym: String, name: String, shares: Double, cost: Double, group: GroupType) {
-        self.sym = sym.uppercased()
-        self.name = name
-        self.shares = shares
-        self.cost = cost
-        self.group = group
-    }
-}
+// MARK: - Holding Model (SwiftData @Model disabled, using HoldingLocal from SupabaseService)
+// @Model
+// class Holding { ... }
+// Re-enable when SwiftData is needed again
 
 // MARK: - Enums
 
@@ -56,7 +42,6 @@ struct PriceData: Sendable {
     let sma50: Double?
     let sma200: Double?
     let rsi14: Double?
-    // Risk & return metrics
     let beta: Double?
     let sharpeRatio: Double?
     let annualizedVolatility: Double?

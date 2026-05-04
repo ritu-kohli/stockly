@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct StockDetailView: View {
-    let holding: Holding
+    let holding: HoldingLocal
     @ObservedObject var vm: PortfolioViewModel
     @State private var analysis: StockAnalysis?
     @State private var isLoading = true

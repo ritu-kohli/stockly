@@ -157,7 +157,7 @@ struct AddHoldingView: View {
         guard !vm.holdings.contains(where: { $0.sym == sym.uppercased() }) else {
             error = "\(sym.uppercased()) is already in your portfolio"; return
         }
-        vm.addHolding(Holding(sym: sym, name: name, shares: sharesVal, cost: costVal, group: group))
+        vm.addHolding(HoldingLocal(sym: sym, name: name, shares: sharesVal, cost: costVal, group: group))
         dismiss()
     }
 }
@@ -170,13 +170,13 @@ func groupForSectorIndustry(_ sector: String, _ industry: String) -> GroupType {
     if i.contains("semiconductor") || i.contains("electronic component") || i.contains("solar") { return .semi }
     if s.contains("technology") || s.contains("communication") || i.contains("internet") || i.contains("software") { return .tech }
     if i.contains("freight") || i.contains("logistics") || i.contains("trucking") || i.contains("shipping") || i.contains("air delivery") { return .logistics }
-    if s.contains("financial") || s.contains("banking") || i.contains("bank") || i.contains("insurance") || i.contains("asset management") { return .logistics }
+    if s.contains("financial") || s.contains("banking") || i.contains("bank") || i.contains("insurance") || i.contains("asset management") || i.contains("capital markets") || i.contains("brokerage") || i.contains("fintech") { return .logistics }
     if s.contains("healthcare") || s.contains("health care") || i.contains("biotech") || i.contains("pharmaceutical") || i.contains("medical") { return .healthcare }
-    if s.contains("energy") || i.contains("oil") || i.contains("gas") || i.contains("mining") || i.contains("coal") { return .energy }
-    if s.contains("consumer") || i.contains("retail") || i.contains("restaurant") || i.contains("apparel") || i.contains("food") { return .consumer }
+    if s.contains("energy") || i.contains("oil") || i.contains("gas") || i.contains("mining") || i.contains("coal") || i.contains("bitcoin") || i.contains("crypto") { return .energy }
+    if s.contains("consumer") || i.contains("retail") || i.contains("restaurant") || i.contains("apparel") || i.contains("food") || i.contains("media") || i.contains("entertainment") || i.contains("streaming") { return .consumer }
     if s.contains("real estate") || i.contains("reit") { return .realestate }
     if s.contains("utilities") || i.contains("electric") || i.contains("water") { return .utilities }
-    if i.contains("bitcoin") || i.contains("crypto") || i.contains("blockchain") || i.contains("capital markets") { return .speculative }
+    if s.contains("industrials") || i.contains("aerospace") || i.contains("defense") || i.contains("machinery") { return .logistics }
     return .other
 }
 
