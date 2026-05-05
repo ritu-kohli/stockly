@@ -29,14 +29,14 @@ struct AddPositionView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(holding.sym).font(.headline.bold())
-                            Text(holding.name).font(.caption).foregroundColor(.secondary)
+                            Text(holding.name).font(.footnote).foregroundColor(.secondary)
                         }
                         Spacer()
                         VStack(alignment: .trailing, spacing: 2) {
                             Text("\(String(format: "%.4g", holding.shares)) shares")
-                                .font(.caption).foregroundColor(.secondary)
+                                .font(.footnote).foregroundColor(.secondary)
                             Text("Avg \(money(holding.cost))")
-                                .font(.caption).foregroundColor(.secondary)
+                                .font(.footnote).foregroundColor(.secondary)
                         }
                     }
                     .padding(.vertical, 4)
@@ -82,7 +82,7 @@ struct AddPositionView: View {
                 }
 
                 if let error {
-                    Section { Text(error).foregroundColor(.red).font(.caption) }
+                    Section { Text(error).foregroundColor(.red).font(.footnote) }
                 }
             }
             .navigationTitle("Add to Position")

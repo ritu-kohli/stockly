@@ -240,7 +240,7 @@ struct SignalTooltipView: View {
                     infoBlock(icon: "lightbulb", title: "What it means", body: info.implication)
 
                     Text("⚠️ This is a technical indicator only, not financial advice.")
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundColor(.secondary)
                         .padding(.top, 4)
                 }

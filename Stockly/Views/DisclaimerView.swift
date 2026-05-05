@@ -72,7 +72,7 @@ struct DisclaimerView: View {
                 .frame(width: 24)
             VStack(alignment: .leading, spacing: 3) {
                 Text(title).font(.subheadline.weight(.semibold))
-                Text(body).font(.caption).foregroundColor(.secondary)
+                Text(body).font(.footnote).foregroundColor(.secondary)
             }
         }
     }

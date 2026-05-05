@@ -27,9 +27,9 @@ struct ContentView: View {
                         if vm.isOffline {
                             HStack(spacing: 8) {
                                 Image(systemName: "wifi.slash")
-                                    .font(.caption)
+                                    .font(.footnote)
                                 Text("Offline — showing cached data")
-                                    .font(.caption.weight(.medium))
+                                    .font(.footnote.weight(.medium))
                             }
                             .foregroundColor(.orange)
                             .frame(maxWidth: .infinity)
@@ -103,7 +103,7 @@ struct ContentView: View {
                         .frame(width: 6, height: 6)
                         .accessibilityHidden(true)
                     Text(vm.isLoading ? "Updating…" : vm.lastUpdated)
-                        .font(.caption.weight(.medium))
+                        .font(.footnote.weight(.medium))
                         .foregroundColor(.textSecondary)
                 }
             }
@@ -124,9 +124,9 @@ struct ContentView: View {
                         }) {
                             HStack(spacing: 4) {
                                 Image(systemName: "trash")
-                                    .font(.caption.weight(.semibold))
+                                    .font(.footnote.weight(.semibold))
                                 Text("Delete (\(selectedSyms.count))")
-                                    .font(.caption.weight(.semibold))
+                                    .font(.footnote.weight(.semibold))
                             }
                             .foregroundColor(.white)
                             .padding(.horizontal, 12)
@@ -221,7 +221,7 @@ struct ContentView: View {
                         .foregroundColor(.white)
                     HStack(spacing: 6) {
                         Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
-                            .font(.caption.weight(.bold))
+                            .font(.footnote.weight(.bold))
                         Text("\(isPositive ? "+" : "")\(money(vm.totalPL)) (\(String(format: "%+.2f", vm.totalReturn))%)")
                             .font(.subheadline.weight(.semibold))
                     }
@@ -259,7 +259,7 @@ struct ContentView: View {
                 .font(.headline.weight(.bold))
                 .foregroundColor(.white)
             Text(title)
-                .font(.caption2.weight(.medium))
+                .font(.footnote.weight(.medium))
                 .foregroundColor(.white.opacity(0.5))
         }
         .frame(maxWidth: .infinity)
@@ -307,7 +307,7 @@ struct ContentView: View {
                                 .background(Color.orange.opacity(0.15)).clipShape(Capsule())
                         }
                     }
-                    Text(h.name).font(.caption).foregroundColor(.textSecondary).lineLimit(1)
+                    Text(h.name).font(.footnote).foregroundColor(.textSecondary).lineLimit(1)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 3) {
@@ -316,7 +316,7 @@ struct ContentView: View {
                         HStack(spacing: 2) {
                             Image(systemName: isUp ? "arrow.up.right" : "arrow.down.right")
                                 .font(.system(size: 9, weight: .bold))
-                            Text(String(format: "%.2f%%", abs(dayChange))).font(.caption.weight(.semibold))
+                            Text(String(format: "%.2f%%", abs(dayChange))).font(.footnote.weight(.semibold))
                         }
                         .foregroundColor(isUp ? .gain : .loss)
                     }
@@ -337,10 +337,10 @@ struct ContentView: View {
 
                 if let extPx = priceData?.extendedPrice, let extChg = priceData?.extendedChangePercent {
                     HStack(spacing: 6) {
-                        Image(systemName: "moon.stars").font(.caption2).foregroundColor(.textTertiary).accessibilityHidden(true)
+                        Image(systemName: "moon.stars").font(.footnote).foregroundColor(.textTertiary).accessibilityHidden(true)
                         Text("After hours").font(.footnote.weight(.medium)).foregroundColor(.textTertiary)
                         Text(moneyStatic(extPx)).font(.footnote.weight(.semibold)).foregroundColor(.textSecondary)
-                        Text(String(format: "%+.2f%%", extChg)).font(.caption.weight(.semibold))
+                        Text(String(format: "%+.2f%%", extChg)).font(.footnote.weight(.semibold))
                             .foregroundColor(extChg >= 0 ? .gain : .loss)
                     }
                     .padding(.horizontal, 16).padding(.bottom, 12)
@@ -385,8 +385,8 @@ struct ContentView: View {
 
     static func detailCellStatic(label: String, value: String, color: Color) -> some View {
         VStack(spacing: 2) {
-            Text(value).font(.caption.weight(.semibold)).foregroundColor(color)
-            Text(label).font(.caption2.weight(.medium)).foregroundColor(.textTertiary)
+            Text(value).font(.footnote.weight(.semibold)).foregroundColor(color)
+            Text(label).font(.footnote.weight(.medium)).foregroundColor(.textTertiary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -436,10 +436,10 @@ struct ContentView: View {
     func detailCell(label: String, value: String, color: Color) -> some View {
         VStack(spacing: 2) {
             Text(value)
-                .font(.caption.weight(.semibold))
+                .font(.footnote.weight(.semibold))
                 .foregroundColor(color)
             Text(label)
-                .font(.caption2.weight(.medium))
+                .font(.footnote.weight(.medium))
                 .foregroundColor(.textTertiary)
         }
         .frame(maxWidth: .infinity)

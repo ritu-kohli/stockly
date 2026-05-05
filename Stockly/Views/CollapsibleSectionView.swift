@@ -32,7 +32,7 @@ struct CollapsibleSection: View {
                         .frame(width: 12)
 
                     Text(group.rawValue)
-                        .font(.caption.weight(.semibold))
+                        .font(.footnote.weight(.semibold))
                         .foregroundColor(.textTertiary)
                         .textCase(.uppercase)
                         .kerning(0.8)
@@ -42,15 +42,15 @@ struct CollapsibleSection: View {
                     // Section P&L summary
                     if !isExpanded {
                         Text(sectionPnl >= 0 ? "+" : "")
-                            .font(.caption2.weight(.semibold))
+                            .font(.footnote.weight(.semibold))
                             .foregroundColor(sectionPnl >= 0 ? .gain : .loss)
                         + Text(String(format: "%.0f", sectionPnl))
-                            .font(.caption2.weight(.semibold))
+                            .font(.footnote.weight(.semibold))
                             .foregroundColor(sectionPnl >= 0 ? .gain : .loss)
                     }
 
                     Text("\(items.count)")
-                        .font(.caption.weight(.medium))
+                        .font(.footnote.weight(.medium))
                         .foregroundColor(.textTertiary)
                 }
             }

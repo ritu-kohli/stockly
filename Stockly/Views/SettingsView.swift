@@ -28,7 +28,7 @@ struct SettingsView: View {
                                 .font(.headline)
                         }
                         Text("Connect to Supabase to persist your portfolio in the cloud. Data survives app deletion and works across devices.")
-                            .font(.caption)
+                            .font(.footnote)
                             .foregroundColor(.secondary)
                     }
                     .padding(.vertical, 4)
@@ -69,7 +69,7 @@ struct SettingsView: View {
                     Text("Supabase Setup")
                 } footer: {
                     Text("Run this SQL in your Supabase SQL editor:\n\nCREATE TABLE holdings (\n  id text PRIMARY KEY,\n  sym text NOT NULL,\n  name text NOT NULL,\n  shares float8 NOT NULL,\n  cost float8 NOT NULL,\n  stock_group text NOT NULL,\n  created_at timestamptz DEFAULT now()\n);\n\nALTER TABLE holdings ENABLE ROW LEVEL SECURITY;\nCREATE POLICY \"Allow all\" ON holdings FOR ALL USING (true);")
-                        .font(.system(.caption2, design: .monospaced))
+                        .font(.system(.footnote, design: .monospaced))
                 }
 
                 Section {
@@ -81,7 +81,7 @@ struct SettingsView: View {
                                 .font(.headline)
                         }
                         Text("Add your Anthropic API key to enable AI-powered news sentiment analysis. Without it, on-device NLP is used as a fallback.")
-                            .font(.caption)
+                            .font(.footnote)
                             .foregroundColor(.secondary)
                     }
                     .padding(.vertical, 4)

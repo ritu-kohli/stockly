@@ -76,7 +76,7 @@ struct StockDetailView: View {
                     .font(.headline.bold())
                     .foregroundColor(.textPrimary)
                 Text(holding.name)
-                    .font(.caption)
+                    .font(.footnote)
                     .foregroundColor(.textSecondary)
             }
 
@@ -103,7 +103,7 @@ struct StockDetailView: View {
                     if let p = priceData {
                         HStack(spacing: 4) {
                             Image(systemName: isUp ? "arrow.up.right" : "arrow.down.right")
-                                .font(.caption.weight(.bold))
+                                .font(.footnote.weight(.bold))
                             Text(String(format: "%+.2f%%", p.dayChangePercent))
                                 .font(.subheadline.weight(.semibold))
                         }
@@ -117,14 +117,14 @@ struct StockDetailView: View {
                 let (bg, fg) = statusColors(smartStatus.status)
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(smartStatus.label)
-                        .font(.caption.weight(.bold))
+                        .font(.footnote.weight(.bold))
                         .foregroundColor(fg)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
                         .background(bg)
                         .clipShape(Capsule())
                     Text("Score: \(smartStatus.score > 0 ? "+" : "")\(String(format: "%.0f", smartStatus.score))")
-                        .font(.caption2)
+                        .font(.footnote)
                         .foregroundColor(.textTertiary)
                 }
             }
@@ -147,7 +147,7 @@ struct StockDetailView: View {
             if !smartStatus.reasons.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Technical Signals")
-                        .font(.caption.weight(.semibold))
+                        .font(.footnote.weight(.semibold))
                         .foregroundColor(.textTertiary)
                         .textCase(.uppercase)
                         .kerning(0.6)
@@ -163,7 +163,7 @@ struct StockDetailView: View {
             if let p = priceData, p.beta != nil || p.sharpeRatio != nil {
                 Divider().background(Color.border)
                 Text("Risk & Return")
-                    .font(.caption.weight(.semibold))
+                    .font(.footnote.weight(.semibold))
                     .foregroundColor(.textTertiary)
                     .textCase(.uppercase)
                     .kerning(0.6)
@@ -216,11 +216,11 @@ struct StockDetailView: View {
             // After hours
             if let extPx = priceData?.extendedPrice, let extChg = priceData?.extendedChangePercent {
                 HStack(spacing: 6) {
-                    Image(systemName: "moon.stars").font(.caption).foregroundColor(.textTertiary)
-                    Text("After hours").font(.caption).foregroundColor(.textTertiary)
-                    Text(money(extPx)).font(.caption.weight(.semibold)).foregroundColor(.textSecondary)
+                    Image(systemName: "moon.stars").font(.footnote).foregroundColor(.textTertiary)
+                    Text("After hours").font(.footnote).foregroundColor(.textTertiary)
+                    Text(money(extPx)).font(.footnote.weight(.semibold)).foregroundColor(.textSecondary)
                     Text(String(format: "%+.2f%%", extChg))
-                        .font(.caption.weight(.semibold))
+                        .font(.footnote.weight(.semibold))
                         .foregroundColor(extChg >= 0 ? .gain : .loss)
                     Spacer()
                 }
@@ -239,7 +239,7 @@ struct StockDetailView: View {
             ProgressView()
                 .tint(.accent)
             Text("Analyzing news with \(Keychain.claudeKey != nil ? "Claude AI" : "on-device NLP")…")
-                .font(.caption)
+                .font(.footnote)
                 .foregroundColor(.textSecondary)
         }
         .frame(maxWidth: .infinity)
@@ -260,9 +260,9 @@ struct StockDetailView: View {
                 if analysis.analyzedWithAI {
                     HStack(spacing: 4) {
                         Image(systemName: "sparkles")
-                            .font(.caption2)
+                            .font(.footnote)
                         Text("Claude AI")
-                            .font(.caption2.weight(.semibold))
+                            .font(.footnote.weight(.semibold))
                     }
                     .foregroundColor(.accent)
                     .padding(.horizontal, 8)
@@ -280,7 +280,7 @@ struct StockDetailView: View {
                         .font(.title3.weight(.bold))
                         .foregroundColor(sentimentColor(analysis.overallSentiment))
                     Text(analysis.summary)
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundColor(.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -290,14 +290,14 @@ struct StockDetailView: View {
             if !analysis.topCatalysts.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Key Catalysts")
-                        .font(.caption.weight(.semibold))
+                        .font(.footnote.weight(.semibold))
                         .foregroundColor(.textTertiary)
                         .textCase(.uppercase)
                         .kerning(0.6)
                     FlowLayout(spacing: 6) {
                         ForEach(analysis.topCatalysts, id: \.rawValue) { catalyst in
                             Text(catalyst.rawValue)
-                                .font(.caption2.weight(.semibold))
+                                .font(.footnote.weight(.semibold))
                                 .foregroundColor(catalystColor(catalyst))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
@@ -356,13 +356,13 @@ struct StockDetailView: View {
 
             HStack {
                 Label("\(analysis.bullishCount) Bullish", systemImage: "arrow.up.right")
-                    .font(.caption2).foregroundColor(.gain)
+                    .font(.footnote).foregroundColor(.gain)
                 Spacer()
                 Label("\(analysis.neutralCount) Neutral", systemImage: "minus")
-                    .font(.caption2).foregroundColor(.textTertiary)
+                    .font(.footnote).foregroundColor(.textTertiary)
                 Spacer()
                 Label("\(analysis.bearishCount) Bearish", systemImage: "arrow.down.right")
-                    .font(.caption2).foregroundColor(.loss)
+                    .font(.footnote).foregroundColor(.loss)
             }
         }
     }
@@ -412,12 +412,12 @@ struct StockDetailView: View {
 
                         HStack(spacing: 8) {
                             Text(article.publisher)
-                                .font(.caption2)
+                                .font(.footnote)
                                 .foregroundColor(.textTertiary)
                             Text("·")
                                 .foregroundColor(.textTertiary)
                             Text(article.publishedAt.formatted(.relative(presentation: .named)))
-                                .font(.caption2)
+                                .font(.footnote)
                                 .foregroundColor(.textTertiary)
                             Spacer()
                             // Catalyst + impact
@@ -442,7 +442,7 @@ struct StockDetailView: View {
                                     .font(.system(size: 9))
                                     .foregroundColor(.accent)
                                 Text(article.reasoning)
-                                    .font(.caption)
+                                    .font(.footnote)
                                     .foregroundColor(.textSecondary)
                                     .fixedSize(horizontal: false, vertical: true)
                                     .multilineTextAlignment(.leading)
@@ -480,12 +480,12 @@ struct StockDetailView: View {
     func statCell(_ label: String, value: String, color: Color) -> some View {
         VStack(spacing: 3) {
             Text(value)
-                .font(.caption.weight(.semibold))
+                .font(.footnote.weight(.semibold))
                 .foregroundColor(color)
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
             Text(label)
-                .font(.caption2)
+                .font(.footnote)
                 .foregroundColor(.textTertiary)
         }
         .frame(maxWidth: .infinity)
@@ -553,7 +553,7 @@ struct RiskMetricCell: View {
             VStack(spacing: 3) {
                 HStack(spacing: 2) {
                     Text(value)
-                        .font(.caption.weight(.bold))
+                        .font(.footnote.weight(.bold))
                         .foregroundColor(color)
                     if !tooltip.isEmpty {
                         Image(systemName: "info.circle")
@@ -562,7 +562,7 @@ struct RiskMetricCell: View {
                     }
                 }
                 Text(label)
-                    .font(.caption2)
+                    .font(.footnote)
                     .foregroundColor(.textTertiary)
                 Text(hint)
                     .font(.system(size: 9))
@@ -606,7 +606,7 @@ struct RiskTooltipView: View {
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Text("⚠️ Informational only. Not financial advice.")
-                .font(.caption)
+                .font(.footnote)
                 .foregroundColor(.secondary)
             Spacer()
         }

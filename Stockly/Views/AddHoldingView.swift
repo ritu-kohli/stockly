@@ -48,11 +48,11 @@ struct AddHoldingView: View {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(s.symbol).font(.headline)
-                                        Text(s.name).font(.caption).foregroundColor(.gray)
+                                        Text(s.name).font(.footnote).foregroundColor(.gray)
                                     }
                                     Spacer()
                                     Text(s.group.rawValue)
-                                        .font(.caption2)
+                                        .font(.footnote)
                                         .padding(.horizontal, 6).padding(.vertical, 3)
                                         .background(Color.purple.opacity(0.15))
                                         .foregroundColor(.purple)
@@ -84,12 +84,12 @@ struct AddHoldingView: View {
                         Spacer()
                         Text(sym.isEmpty ? "Auto-detected from ticker" : group.rawValue)
                             .foregroundColor(sym.isEmpty ? .secondary.opacity(0.5) : .secondary)
-                            .font(sym.isEmpty ? .caption : .body)
+                            .font(sym.isEmpty ? .footnote : .body)
                     }
                 }
 
                 if let error {
-                    Section { Text(error).foregroundColor(.red).font(.caption) }
+                    Section { Text(error).foregroundColor(.red).font(.footnote) }
                 }
             }
             .navigationTitle("Add Holding")
