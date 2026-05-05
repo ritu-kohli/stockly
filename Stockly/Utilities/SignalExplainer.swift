@@ -184,11 +184,11 @@ struct SignalPill: View {
             else { showTooltip = true }
         }) {
             Text(reason)
-                .font(.caption2.weight(.medium))
+                .font(.footnote.weight(.medium))
                 .foregroundColor(info.color)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(info.color.opacity(0.12))
+                .background(info.color.opacity(0.30))
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -229,7 +229,7 @@ struct SignalTooltipView: View {
                             Text(info.title)
                                 .font(.title3.bold())
                             Text(info.plain)
-                                .font(.subheadline)
+                                .font(.headline)
                                 .foregroundColor(.secondary)
                         }
                     }

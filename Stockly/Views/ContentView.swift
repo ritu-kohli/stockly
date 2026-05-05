@@ -54,10 +54,6 @@ struct ContentView: View {
             .onAppear {
                 guard !contextInjected else { return }
                 contextInjected = true
-//                if !UserDefaults.standard.bool(forKey: "disclaimer_shown") {
-//                    activeSheet = .disclaimer
-//                }
-                // vm.updateContext(modelContext)  // DISABLED — SwiftData
                 vm.syncFromSupabase()
                 vm.refreshPrices()
                 vm.startAutoRefresh()
@@ -342,23 +338,23 @@ struct ContentView: View {
                 if let extPx = priceData?.extendedPrice, let extChg = priceData?.extendedChangePercent {
                     HStack(spacing: 6) {
                         Image(systemName: "moon.stars").font(.caption2).foregroundColor(.textTertiary).accessibilityHidden(true)
-                        Text("After hours").font(.caption.weight(.medium)).foregroundColor(.textTertiary)
-                        Text(moneyStatic(extPx)).font(.caption.weight(.semibold)).foregroundColor(.textSecondary)
+                        Text("After hours").font(.footnote.weight(.medium)).foregroundColor(.textTertiary)
+                        Text(moneyStatic(extPx)).font(.footnote.weight(.semibold)).foregroundColor(.textSecondary)
                         Text(String(format: "%+.2f%%", extChg)).font(.caption.weight(.semibold))
                             .foregroundColor(extChg >= 0 ? .gain : .loss)
                     }
                     .padding(.horizontal, 16).padding(.bottom, 12)
                 }
 
-                if !status.reasons.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 6) {
-                            ForEach(status.reasons, id: \.self) { SignalPill(reason: $0) }
-                        }
-                        .padding(.horizontal, 16)
-                    }
-                    .padding(.bottom, 12)
-                }
+//                if !status.reasons.isEmpty {
+//                    ScrollView(.horizontal, showsIndicators: false) {
+//                        HStack(spacing: 6) {
+//                            ForEach(status.reasons, id: \.self) { SignalPill(reason: $0) }
+//                        }
+//                        .padding(.horizontal, 16)
+//                    }
+//                    .padding(.bottom, 12)
+//                }
             }
 
             Rectangle().fill(Color.border).frame(height: 1).padding(.leading, 16).accessibilityHidden(true)
@@ -415,8 +411,8 @@ struct ContentView: View {
         let isUp       = dayChange >= 0
         let status     = vm.smartStatus(for: h)
         let isSelected = selectedSyms.contains(h.sym)
-        let pnlSign    = pnl >= 0 ? "gain" : "loss"
-        let daySign    = isUp ? "up" : "down"
+//        let pnlSign    = pnl >= 0 ? "gain" : "loss"
+//        let daySign    = isUp ? "up" : "down"
 
         return ContentView.makeRow(
             h: h, priceData: priceData, px: px, dayChange: dayChange,

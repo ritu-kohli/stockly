@@ -1,10 +1,3 @@
-//
-//  Item.swift
-//  Stockly
-//
-//  Created by Ritu Kohli on 2024-08-25.
-//
-
 import Foundation
 import SwiftData
 
